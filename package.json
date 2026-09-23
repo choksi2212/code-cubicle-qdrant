@@ -1,0 +1,24 @@
+{
+  "name": "field-edge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FieldEdge — offline-first AI platform for field workers (Paytm hackathon)",
+  "scripts": {
+    "build:native": "cargo build --release --manifest-path packages/field-edge-rust/Cargo.toml",
+    "ios": "pnpm --filter @field-edge/mobile ios",
+    "android": "pnpm --filter @field-edge/mobile android",
+    "start": "pnpm --filter @field-edge/mobile start",
+    "test": "cargo test --manifest-path packages/field-edge-rust/Cargo.toml && pnpm -r test",
+    "test:rust": "cargo test --manifest-path packages/field-edge-rust/Cargo.toml",
+    "lint": "cargo clippy --manifest-path packages/field-edge-rust/Cargo.toml && pnpm -r lint",
+    "sync-api:dev": "cd apps/sync-api && uvicorn app.main:app --reload --port 8000",
+    "sync-api:install": "pip install -e apps/sync-api",
+    "demo:seed": "tsx apps/mobile/scripts/seed.ts",
+    "format": "cargo fmt --manifest-path packages/field-edge-rust/Cargo.toml && pnpm -r format"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

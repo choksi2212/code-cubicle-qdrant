@@ -1,0 +1,30 @@
+# Render Blueprint — FieldEdge sync API
+# Deploy: https://dashboard.render.com → New → Blueprint → point at this repo
+# Or via CLI: render blueprint launch --path apps/sync-api/render.yaml
+
+services:
+  - type: web
+    name: field-edge-sync-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    rootDir: apps/sync-api
+    plan: free
+    region: oregon
+    healthCheckPath: /sync/heartbeat
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: QDRANT_COLLECTION
+        value: field_edge_central
+      # Secrets — set these in the Render dashboard before first deploy
+      # (or use Secret Files / env groups). Do NOT commit values to git.
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

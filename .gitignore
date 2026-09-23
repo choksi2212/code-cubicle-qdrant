@@ -1,0 +1,88 @@
+# ─── Dependencies ───────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ─── Build artifacts ────────────────────────────────────────────────────────
+dist/
+build/
+target/
+**/target/
+*.ipa
+*.apk
+*.aab
+
+# React Native / Metro
+.metro-cache/
+.metro-health-check*
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace/xcuserdata/
+
+# Android — covers all nested gradle/build dirs
+.gradle/
+**/.gradle/
+**/build/
+local.properties
+**/generated/
+captures/
+.cxx/
+android/.gradle/
+android/app/build/
+android/build/
+
+# ─── Env / secrets ──────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.keystore
+!debug.keystore
+
+# ─── Logs ───────────────────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── IDE / OS ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Rust ────────────────────────────────────────────────────────────────────
+**/*.rs.bk
+Cargo.lock.bak
+*.d
+*.pdb
+
+# ─── Coverage / profiling ───────────────────────────────────────────────────
+coverage/
+*.lcov
+*.prof
+*.gcda
+*.gcno
+
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+**/*.egg-info/
+.pytest_cache/
+
+# ─── ONNX model files (580MB — too big for git; regenerate via scripts/export-clip-fp32.py) ──
+apps/mobile/android/app/src/main/assets/models/
+**/*.onnx
+
+# ─── Misc ────────────────────────────────────────────────────────────────────
+*.tsbuildinfo
+.cache/
+.tmp/
+scratch/

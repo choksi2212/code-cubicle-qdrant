@@ -1,0 +1,28 @@
+// UniFFI Interface Definition Language for field_edge_rust.
+// Run: cargo build --release  (build.rs invokes uniffi)
+// Generate Swift:   uniffi-bindgen generate src/field_edge.udl --language swift --out-dir target/swift
+// Generate Kotlin: uniffi-bindgen generate src/field_edge.udl --language kotlin --out-dir target/kotlin
+
+namespace field_edge {
+    // Shard operations
+    string open_shard(string directory);
+    string upsert_points(string shard_dir, string points_json);
+    string query(string shard_dir, string request_json);
+    string retrieve(string shard_dir, string ids_json);
+    string delete_points(string shard_dir, string ids_json);
+    i64 point_count(string shard_dir);
+
+    // Sync operations
+    string sync_diff(string local_json, string remote_json);
+    string resolve_conflict(string local_json, string remote_json);
+
+    // Crypto
+    string checksum(string vector_json);
+
+    // WAL
+    string wal_append(string wal_path, string entry_json);
+    string wal_read_all(string wal_path);
+
+    // Metadata
+    string version();
+};

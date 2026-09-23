@@ -1,0 +1,370 @@
+package com.fieldedge.edge
+
+import android.util.Log
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableType
+import com.facebook.react.bridge.WritableNativeMap
+import com.facebook.react.bridge.Arguments
+import org.json.JSONArray
+import org.json.JSONObject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * FieldEdge Rust bridge — calls into libfield_edge_rust.so via dlsym.
+ *
+ * The Rust crate exports plain C-ABI functions that take C-strings and
+ * return heap-allocated C-strings (free with fe_string_free). Kotlin
+ * uses dlsym to look up the symbols at runtime — this sidesteps all the
+ * JNI function-table / naming-mangling complexity and just works.
+ */
+class FieldEdgeRustModule(reactContext: ReactApplicationContext) :
+    ReactContextBaseJavaModule(reactContext) {
+
+    companion object {
+        const val NAME = "FieldEdgeRust"
+        private const val TAG = "FieldEdgeRust"
+        const val LIB_NAME = "field_edge_rust"
+
+        init {
+            System.loadLibrary(LIB_NAME)
+        }
+    }
+
+    override fun getName(): String = NAME
+
+    private val scope = CoroutineScope(Dispatchers.Main + kotlinx.coroutines.Job())
+
+    init {
+        Log.i(TAG, "FieldEdgeRust module ready (lib=$LIB_NAME loaded)")
+    }
+
+    // ─── dlsym wrappers ──────────────────────────────────────────────────────
+
+    private fun lookup(name: String): Long {
+        return NativeLoader.dlsym(name)
+    }
+
+    /** Calls a C-ABI function with 1 C-string argument, returns the JSON string. */
+    private fun call1(symbol: String, a: String): String {
+        return NativeLoader.call1(symbol, a)
+    }
+
+    private fun call2(symbol: String, a: String, b: String): String {
+        return NativeLoader.call2(symbol, a, b)
+    }
+
+    private fun call0(symbol: String): String {
+        return NativeLoader.call0(symbol)
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    private fun readableMapToJson(map: ReadableMap?): String {
+        if (map == null) return "{}"
+        return try {
+            val obj = JSONObject()
+            val iter = map.keySetIterator()
+            while (iter.hasNextKey()) {
+                val key = iter.nextKey()
+                obj.put(key, readableToJsonValue(map, key))
+            }
+            obj.toString()
+        } catch (e: Throwable) {
+            Log.w(TAG, "readableMapToJson failed: ${e.message}")
+            "{}"
+        }
+    }
+
+    private fun readableArrayToJson(arr: ReadableArray?): String {
+        if (arr == null) return "[]"
+        return try {
+            val list = JSONArray()
+            for (i in 0 until arr.size()) {
+                list.put(readableArrayItemToJsonValue(arr, i))
+            }
+            list.toString()
+        } catch (e: Throwable) {
+            Log.w(TAG, "readableArrayToJson failed: ${e.message}")
+            "[]"
+        }
+    }
+
+    private fun readableToJsonValue(map: ReadableMap, key: String): Any? {
+        return when (map.getType(key)) {
+            ReadableType.Null -> JSONObject.NULL
+            ReadableType.Boolean -> map.getBoolean(key)
+            ReadableType.Number -> map.getDouble(key)
+            ReadableType.String -> map.getString(key)
+            ReadableType.Map -> JSONObject(readableMapToJson(map.getMap(key)))
+            ReadableType.Array -> JSONArray(readableArrayToJson(map.getArray(key)))
+        }
+    }
+
+    private fun readableArrayItemToJsonValue(arr: ReadableArray, idx: Int): Any? {
+        return when (arr.getType(idx)) {
+            ReadableType.Null -> JSONObject.NULL
+            ReadableType.Boolean -> arr.getBoolean(idx)
+            ReadableType.Number -> arr.getDouble(idx)
+            ReadableType.String -> arr.getString(idx)
+            ReadableType.Map -> JSONObject(readableMapToJson(arr.getMap(idx)))
+            ReadableType.Array -> JSONArray(readableArrayToJson(arr.getArray(idx)))
+        }
+    }
+
+    private fun jsonToWritableMap(json: String): WritableNativeMap {
+        val map = WritableNativeMap()
+        try {
+            val obj = JSONObject(json)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                putJsonValue(map, key, obj.get(key))
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "jsonToWritableMap failed: ${e.message}")
+        }
+        return map
+    }
+
+    private fun putJsonValue(map: WritableNativeMap, key: String, value: Any?) {
+        when (value) {
+            null, JSONObject.NULL -> map.putNull(key)
+            is Boolean -> map.putBoolean(key, value)
+            is Int -> map.putInt(key, value)
+            is Long -> map.putDouble(key, value.toDouble())
+            is Double -> map.putDouble(key, value)
+            is Float -> map.putDouble(key, value.toDouble())
+            is String -> map.putString(key, value)
+            is JSONObject -> {
+                val nested = WritableNativeMap()
+                val keys = value.keys()
+                while (keys.hasNext()) {
+                    val k = keys.next()
+                    putJsonValue(nested, k, value.get(k))
+                }
+                map.putMap(key, nested)
+            }
+            is JSONArray -> {
+                val arr = Arguments.createArray()
+                for (i in 0 until value.length()) {
+                    val item = value.get(i)
+                    when (item) {
+                        null -> arr.pushNull()
+                        is Boolean -> arr.pushBoolean(item)
+                        is Int -> arr.pushInt(item)
+                        is Long -> arr.pushDouble(item.toDouble())
+                        is Double -> arr.pushDouble(item)
+                        is Float -> arr.pushDouble(item.toDouble())
+                        is String -> arr.pushString(item)
+                        is JSONObject -> {
+                            val nestedMap = WritableNativeMap()
+                            val keys = item.keys()
+                            while (keys.hasNext()) {
+                                val k = keys.next()
+                                putJsonValue(nestedMap, k, item.get(k))
+                            }
+                            arr.pushMap(nestedMap)
+                        }
+                        is JSONArray -> {
+                            val nestedArr = Arguments.createArray()
+                            for (j in 0 until item.length()) {
+                                val ni = item.get(j)
+                                when (ni) {
+                                    null -> nestedArr.pushNull()
+                                    is Boolean -> nestedArr.pushBoolean(ni)
+                                    is Int -> nestedArr.pushInt(ni)
+                                    is Long -> nestedArr.pushDouble(ni.toDouble())
+                                    is Double -> nestedArr.pushDouble(ni)
+                                    is Float -> nestedArr.pushDouble(ni.toDouble())
+                                    is String -> nestedArr.pushString(ni)
+                                    else -> nestedArr.pushString(ni.toString())
+                                }
+                            }
+                            arr.pushArray(nestedArr)
+                        }
+                        else -> arr.pushString(item.toString())
+                    }
+                }
+                map.putArray(key, arr)
+            }
+            else -> map.putString(key, value.toString())
+        }
+    }
+
+    private fun getShardDir(): String {
+        val files = reactApplicationContext.filesDir
+        val shard = java.io.File(files, "field_edge_shard")
+        if (!shard.exists()) shard.mkdirs()
+        return shard.absolutePath
+    }
+
+    private fun errorResponse(msg: String): String =
+        """{"status":"err","code":"JNI_NULL","message":"$msg"}"""
+
+    // ─── React-exposed methods ───────────────────────────────────────────────
+
+    @ReactMethod
+    fun openShard(config: ReadableMap, promise: Promise) {
+        scope.launch {
+            try {
+                val directory = if (config.hasKey("directory")) config.getString("directory") ?: "" else ""
+                val result = withContext(Dispatchers.IO) { call1("fe_open_shard", directory) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("EDGE_OPEN_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun upsertPoints(points: ReadableArray, promise: Promise) {
+        scope.launch {
+            try {
+                val json = readableArrayToJson(points)
+                val shardDir = getShardDir()
+                val result = withContext(Dispatchers.IO) { call2("fe_upsert_points", shardDir, json) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("EDGE_UPSERT_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun query(request: ReadableMap, promise: Promise) {
+        scope.launch {
+            try {
+                val json = readableMapToJson(request)
+                val shardDir = getShardDir()
+                val result = withContext(Dispatchers.IO) { call2("fe_query", shardDir, json) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("EDGE_QUERY_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun retrieve(ids: ReadableArray, promise: Promise) {
+        scope.launch {
+            try {
+                val json = readableArrayToJson(ids)
+                val shardDir = getShardDir()
+                val result = withContext(Dispatchers.IO) { call2("fe_retrieve", shardDir, json) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("EDGE_RETRIEVE_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun deletePoints(ids: ReadableArray, promise: Promise) {
+        scope.launch {
+            try {
+                val json = readableArrayToJson(ids)
+                val shardDir = getShardDir()
+                val result = withContext(Dispatchers.IO) { call2("fe_delete_points", shardDir, json) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("EDGE_DELETE_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun pointCount(promise: Promise) {
+        scope.launch {
+            try {
+                val shardDir = getShardDir()
+                val count = withContext(Dispatchers.IO) {
+                    NativeLoader.callPointCount("fe_point_count", shardDir)
+                }
+                promise.resolve(count.toDouble())
+            } catch (e: Throwable) {
+                promise.reject("EDGE_COUNT_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun computeSyncDiff(localJson: String, remoteJson: String, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { call2("fe_sync_diff", localJson, remoteJson) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("SYNC_DIFF_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun resolveConflict(localJson: String, remoteJson: String, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { call2("fe_resolve_conflict", localJson, remoteJson) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("CONFLICT_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun checksum(vector: ReadableArray, promise: Promise) {
+        scope.launch {
+            try {
+                val json = readableArrayToJson(vector)
+                val result = withContext(Dispatchers.IO) { call1("fe_checksum", json) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("CHECKSUM_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun walAppend(walPath: String, entryJson: String, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { call2("fe_wal_append", walPath, entryJson) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("WAL_APPEND_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun walReadAll(walPath: String, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { call1("fe_wal_read_all", walPath) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("WAL_READ_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun version(promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { call0("fe_version") }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("VERSION_FAILED", e.message, e)
+            }
+        }
+    }
+}
