@@ -9,7 +9,6 @@
  * Fields:
  *   - serverUrl    — sync API base URL (overridable for local dev)
  *   - photoCap     — per-device photo cap (0 = unlimited)
- *   - syncInterval — UI placeholder for background sync (Manual/15m/1h/6h)
  *   - hasOnboarded — gates the OnboardingScreen on first launch
  */
 
@@ -18,16 +17,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { SYNC_API_URL } from '../config';
 
-export type SyncInterval = 'manual' | '15m' | '1h' | '6h';
-
 interface SettingsState {
   serverUrl: string;
   photoCap: number;
-  syncInterval: SyncInterval;
   hasOnboarded: boolean;
   setServerUrl: (url: string) => void;
   setPhotoCap: (n: number) => void;
-  setSyncInterval: (v: SyncInterval) => void;
   markOnboarded: () => void;
   reset: () => void;
 }
@@ -37,7 +32,6 @@ const STORAGE_KEY = '@fieldedge/settings';
 const defaults = {
   serverUrl: SYNC_API_URL,
   photoCap: 5000,
-  syncInterval: 'manual' as SyncInterval,
   hasOnboarded: false,
 };
 
@@ -48,14 +42,22 @@ export const useSettingsStore = create<SettingsState>()(
       setServerUrl: (url) => set({ serverUrl: url }),
       setPhotoCap: (n) =>
         set({ photoCap: Math.max(0, Math.floor(n)) }),
-      setSyncInterval: (v) => set({ syncInterval: v }),
       markOnboarded: () => set({ hasOnboarded: true }),
       reset: () => set({ ...defaults, hasOnboarded: false }),
     }),
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
+      migrate: (persisted: any, version: number) => {
+        // v1 → v2: dropped syncInterval (was a UI placeholder; will be
+        // reintroduced by the background-sync feature once WorkManager
+        // is wired up).
+        if (version < 2 && persisted && 'syncInterval' in persisted) {
+          delete persisted.syncInterval;
+        }
+        return persisted as SettingsState;
+      },
     },
   ),
 );

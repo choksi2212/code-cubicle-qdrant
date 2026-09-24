@@ -4,9 +4,9 @@
  * Sections:
  *   - Server URL      (text input, persisted to settings store)
  *   - Photo cap       (number stepper; 0 = unlimited)
- *   - Sync interval   (Manual / 15m / 1h / 6h — UI only; WorkManager
- *                      isn't wired up yet so this is a placeholder)
- *   - Account         (device token prefix + Logout button)
+ *   - Account         (device token prefix + Logout button — clears local
+ *                      device token + onboarding flag; no server-side
+ *                      session exists yet, so logout is local-only)
  *   - Storage usage   (photos / shard / WAL bytes; Refresh button)
  *   - About           (app version + hackathon credit)
  *
@@ -24,7 +24,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSettingsStore, SyncInterval } from '../stores/settingsStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { formatBytes, storageUsage, StorageUsage } from '../storage/storageUsage';
 import { getDeviceToken } from '../config';
 
@@ -33,22 +33,13 @@ interface Props {
   onLogout: () => void;
 }
 
-const INTERVALS: { value: SyncInterval; label: string }[] = [
-  { value: 'manual', label: 'Manual' },
-  { value: '15m', label: '15 min' },
-  { value: '1h', label: '1 hour' },
-  { value: '6h', label: '6 hours' },
-];
-
 const APP_VERSION = '0.1.0';
 
 export function SettingsScreen({ onClose, onLogout }: Props) {
   const serverUrl = useSettingsStore((s) => s.serverUrl);
   const photoCap = useSettingsStore((s) => s.photoCap);
-  const syncInterval = useSettingsStore((s) => s.syncInterval);
   const setServerUrl = useSettingsStore((s) => s.setServerUrl);
   const setPhotoCap = useSettingsStore((s) => s.setPhotoCap);
-  const setSyncInterval = useSettingsStore((s) => s.setSyncInterval);
 
   const [urlDraft, setUrlDraft] = useState(serverUrl);
   const [tokenPrefix, setTokenPrefix] = useState('…');
@@ -170,34 +161,6 @@ export function SettingsScreen({ onClose, onLogout }: Props) {
               <Text style={styles.stepperBtnText}>+100</Text>
             </Pressable>
           </View>
-        </Section>
-
-        {/* ─── Sync interval ────────────────────────────────────────────── */}
-        <Section label="Sync interval">
-          <View style={styles.intervalRow}>
-            {INTERVALS.map((i) => (
-              <Pressable
-                key={i.value}
-                style={[
-                  styles.intervalChip,
-                  syncInterval === i.value && styles.intervalChipActive,
-                ]}
-                onPress={() => setSyncInterval(i.value)}
-              >
-                <Text
-                  style={[
-                    styles.intervalChipText,
-                    syncInterval === i.value && styles.intervalChipTextActive,
-                  ]}
-                >
-                  {i.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <Text style={styles.hint}>
-            UI placeholder — background sync via WorkManager isn't wired up yet.
-          </Text>
         </Section>
 
         {/* ─── Account ─────────────────────────────────────────────────── */}
@@ -331,16 +294,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  intervalRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  intervalChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#2A2F36',
-  },
-  intervalChipActive: { backgroundColor: '#00BFA6' },
-  intervalChipText: { color: '#8B95A5', fontSize: 13, fontWeight: '600' },
-  intervalChipTextActive: { color: '#003B33' },
   hint: { color: '#5B6573', fontSize: 12, fontStyle: 'italic' },
   row: {
     flexDirection: 'row',

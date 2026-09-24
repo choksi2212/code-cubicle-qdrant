@@ -2,7 +2,7 @@
  * Snapshot tests for SettingsScreen.
  *
  * Renders the screen and verifies the snapshot locks the layout
- * (sections, inputs, stepper, interval chips, account row, about).
+ * (sections, inputs, stepper, account row, storage usage, about).
  *
  * The snapshot must be inspected and accepted on first run — don't
  * blindly regenerate on changes.
@@ -29,11 +29,9 @@ jest.mock('../src/stores/settingsStore', () => {
   const state = {
     serverUrl: 'https://default.test',
     photoCap: 5000,
-    syncInterval: 'manual',
     hasOnboarded: true,
     setServerUrl: jest.fn(),
     setPhotoCap: jest.fn(),
-    setSyncInterval: jest.fn(),
     markOnboarded: jest.fn(),
     reset: jest.fn(),
   };
@@ -64,7 +62,6 @@ describe('SettingsScreen', () => {
     expect(json).toContain('Settings');
     expect(json).toContain('Server URL');
     expect(json).toContain('Photo cap');
-    expect(json).toContain('Sync interval');
     expect(json).toContain('Account');
     expect(json).toContain('Storage usage');
     expect(json).toContain('About');
