@@ -72,6 +72,9 @@ dependencies {
     // AndroidX WorkManager — periodic sync background scheduler (SyncWorker)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // AndroidX Security Crypto — EncryptedSharedPreferences for SecureStoreModule
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
