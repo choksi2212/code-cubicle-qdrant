@@ -37,11 +37,22 @@ import { CaptureScreen } from './src/screens/CaptureScreen';
 import { SyncReportScreen } from './src/screens/SyncReportScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { AlbumScreen } from './src/screens/AlbumScreen';
+import { MapScreen } from './src/screens/MapScreen';
+import { ConflictDetailScreen } from './src/screens/ConflictDetailScreen';
 
-type Screen = 'home' | 'capture' | 'report' | 'onboarding' | 'settings';
+type Screen =
+  | 'search'
+  | 'capture'
+  | 'report'
+  | 'onboarding'
+  | 'settings'
+  | 'album'
+  | 'map'
+  | 'conflict-detail';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>('search');
   const [bootReady, setBootReady] = useState(false);
   const [shardStatus, setShardStatus] = useState('Not initialized');
   const [pointCount, setPointCount] = useState(0);
@@ -99,7 +110,7 @@ export default function App() {
         setTimeout(check, 50);
         return;
       }
-      if (!useSettingsStore.getState().hasOnboarded && screen === 'home') {
+      if (!useSettingsStore.getState().hasOnboarded && screen === 'search') {
         setScreen('onboarding');
       }
     };
@@ -110,7 +121,7 @@ export default function App() {
   }, [bootReady, screen]);
 
   const onCaptured = async (photoId: string) => {
-    setScreen('home');
+    setScreen('search');
     Alert.alert(
       'Captured',
       `Photo ${photoId.slice(0, 8)}… saved offline. Tap Sync to push to cloud.`,
@@ -136,7 +147,7 @@ export default function App() {
     return (
       <CaptureScreen
         onCaptured={onCaptured}
-        onCancel={() => setScreen('home')}
+        onCancel={() => setScreen('search')}
       />
     );
   }
@@ -147,7 +158,7 @@ export default function App() {
         <StatusBar barStyle="light-content" />
         <SyncReportScreen
           report={syncReport}
-          onClose={() => setScreen('home')}
+          onClose={() => setScreen('search')}
         />
       </SafeAreaView>
     );
@@ -155,7 +166,7 @@ export default function App() {
 
   if (screen === 'onboarding') {
     return (
-      <OnboardingScreen onDone={() => setScreen('home')} />
+      <OnboardingScreen onDone={() => setScreen('search')} />
     );
   }
 
@@ -164,7 +175,7 @@ export default function App() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
         <SettingsScreen
-          onClose={() => setScreen('home')}
+          onClose={() => setScreen('search')}
           onLogout={() => {
             // Clear token + onboarding flag; AsyncStorage wipe is fire-and-
             // forget so we don't block the nav transition.
@@ -178,6 +189,35 @@ export default function App() {
           }}
         />
       </SafeAreaView>
+    );
+  }
+
+  if (screen === 'album') {
+    return (
+      <AlbumScreen
+        onBack={() => setScreen('search')}
+        onPhotoPress={(photoId) => console.log('open', photoId)}
+      />
+    );
+  }
+
+  if (screen === 'map') {
+    return (
+      <MapScreen onBack={() => setScreen('search')} />
+    );
+  }
+
+  if (screen === 'conflict-detail') {
+    // Mount point owned by the Conflict UX agent. The current screen
+    // requires a photoId prop; for v1 nav from the home screen we
+    // pass an empty placeholder (the Conflict UX agent's own nav
+    // surfaces the real photoId). The onClose callback routes back to
+    // the search/home view.
+    return (
+      <ConflictDetailScreen
+        photoId=""
+        onClose={() => setScreen('search')}
+      />
     );
   }
 
@@ -217,7 +257,11 @@ export default function App() {
           </View>
         </View>
 
-        <SearchScreen onPhotoPress={(hit) => console.log('open', hit.id)} />
+        <SearchScreen
+          onPhotoPress={(hit) => console.log('open', hit.id)}
+          activeTab="search"
+          onTabChange={(tab) => setScreen(tab)}
+        />
 
         <View style={styles.actionRow}>
           <Pressable

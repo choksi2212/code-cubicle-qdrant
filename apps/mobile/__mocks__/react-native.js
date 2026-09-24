@@ -35,6 +35,8 @@ module.exports = {
   Text: mk('Text'),
   ScrollView: mk('ScrollView'),
   FlatList: mk('FlatList'),
+  SectionList: mk('SectionList'),
+  RefreshControl: mk('RefreshControl'),
   Pressable: mk('Pressable'),
   TextInput: mk('TextInput'),
   Image: mk('Image'),

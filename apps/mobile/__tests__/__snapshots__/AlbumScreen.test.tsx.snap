@@ -1,0 +1,203 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
+<SafeAreaView
+  style={
+    {
+      "backgroundColor": "#0E1116",
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "padding": 16,
+        "paddingTop": 8,
+      }
+    }
+  >
+    <Pressable
+      hitSlop={12}
+      onPress={[Function]}
+    >
+      <Text
+        style={
+          {
+            "color": "#00BFA6",
+            "fontSize": 14,
+            "fontWeight": "600",
+          }
+        }
+      >
+        ← Back
+      </Text>
+    </Pressable>
+    <Text
+      style={
+        {
+          "color": "#E6EAF0",
+          "fontSize": 22,
+          "fontWeight": "bold",
+        }
+      }
+    >
+      Album
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#8B95A5",
+          "fontSize": 14,
+          "fontWeight": "600",
+          "minWidth": 60,
+          "textAlign": "right",
+        }
+      }
+    >
+      0
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flex": 1,
+        "justifyContent": "center",
+        "padding": 32,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#5B6573",
+          "fontSize": 16,
+          "fontWeight": "600",
+        }
+      }
+    >
+      No photos yet
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#5B6573",
+          "fontSize": 12,
+          "marginTop": 4,
+          "textAlign": "center",
+        }
+      }
+    >
+      Capture a photo to start your album.
+    </Text>
+  </View>
+</SafeAreaView>
+`;
+
+exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = `
+<SafeAreaView
+  style={
+    {
+      "backgroundColor": "#0E1116",
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "padding": 16,
+        "paddingTop": 8,
+      }
+    }
+  >
+    <Pressable
+      hitSlop={12}
+      onPress={[Function]}
+    >
+      <Text
+        style={
+          {
+            "color": "#00BFA6",
+            "fontSize": 14,
+            "fontWeight": "600",
+          }
+        }
+      >
+        ← Back
+      </Text>
+    </Pressable>
+    <Text
+      style={
+        {
+          "color": "#E6EAF0",
+          "fontSize": 22,
+          "fontWeight": "bold",
+        }
+      }
+    >
+      Album
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#8B95A5",
+          "fontSize": 14,
+          "fontWeight": "600",
+          "minWidth": 60,
+          "textAlign": "right",
+        }
+      }
+    >
+      2
+    </Text>
+  </View>
+  <SectionList
+    contentContainerStyle={
+      {
+        "paddingBottom": 32,
+      }
+    }
+    keyExtractor={[Function]}
+    renderItem={[Function]}
+    renderSectionFooter={[Function]}
+    renderSectionHeader={[Function]}
+    sections={
+      [
+        {
+          "data": [
+            {
+              "capturedAt": "2026-09-24T12:00:00.000Z",
+              "lat": null,
+              "lng": null,
+              "photoId": "p1",
+              "photoPath": "proj/dev/p1.jpg",
+            },
+          ],
+          "title": "Today",
+        },
+        {
+          "data": [
+            {
+              "capturedAt": "2026-09-22T12:00:00.000Z",
+              "lat": null,
+              "lng": null,
+              "photoId": "p2",
+              "photoPath": "proj/dev/p1.jpg",
+            },
+          ],
+          "title": "This week",
+        },
+      ]
+    }
+    stickySectionHeadersEnabled={false}
+  />
+</SafeAreaView>
+`;

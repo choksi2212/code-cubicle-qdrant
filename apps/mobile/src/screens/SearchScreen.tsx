@@ -2,6 +2,11 @@
  * SearchScreen — text-input semantic search.
  *
  * Embeds query text via CLIP, calls Rust bridge query, displays results.
+ *
+ * Also exposes the top-row "Search | Album | Map" nav strip — the three
+ * browse views of the local library. The active chip is highlighted with
+ * the accent color; tapping a sibling chip navigates via the parent's
+ * onTabChange callback (App.tsx wires it to setScreen).
  */
 
 import React, { useState } from 'react';
@@ -18,13 +23,15 @@ import {
 import { fieldEdge, QueryHit } from '../native/fieldEdge';
 import { embedText } from '../embedding/clip';
 import {
-  FIELD_SHARD_DIR,
-  DEMO_PROJECTS,
   photoFileUriFromRelative,
 } from '../config';
 
+export type SearchScreenTab = 'search' | 'album' | 'map';
+
 interface Props {
   onPhotoPress: (hit: QueryHit) => void;
+  activeTab?: SearchScreenTab;
+  onTabChange?: (tab: SearchScreenTab) => void;
 }
 
 const SUGGESTIONS = [
@@ -34,7 +41,17 @@ const SUGGESTIONS = [
   'urban decay',
 ];
 
-export function SearchScreen({ onPhotoPress }: Props) {
+const TABS: { key: SearchScreenTab; label: string }[] = [
+  { key: 'search', label: 'Search' },
+  { key: 'album', label: 'Album' },
+  { key: 'map', label: 'Map' },
+];
+
+export function SearchScreen({
+  onPhotoPress,
+  activeTab = 'search',
+  onTabChange,
+}: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<QueryHit[]>([]);
   const [busy, setBusy] = useState(false);
@@ -73,6 +90,36 @@ export function SearchScreen({ onPhotoPress }: Props) {
 
   return (
     <View style={styles.container}>
+      {/* Top-row nav strip. Active tab gets the accent color; others
+          stay muted. Tapping a sibling fires onTabChange → App.tsx
+          setScreen(). */}
+      <View style={styles.tabStrip}>
+        {TABS.map((t) => {
+          const isActive = t.key === activeTab;
+          return (
+            <Pressable
+              key={t.key}
+              style={[
+                styles.tab,
+                isActive ? styles.tabActive : styles.tabInactive,
+              ]}
+              onPress={() => onTabChange?.(t.key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isActive }}
+            >
+              <Text
+                style={[
+                  styles.tabLabel,
+                  isActive ? styles.tabLabelActive : styles.tabLabelInactive,
+                ]}
+              >
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <View style={styles.searchBar}>
         <TextInput
           style={styles.input}
@@ -149,6 +196,24 @@ export function SearchScreen({ onPhotoPress }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0E1116' },
+  tabStrip: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabActive: { backgroundColor: '#00BFA6' },
+  tabInactive: { backgroundColor: '#1A1F26' },
+  tabLabel: { fontSize: 13, fontWeight: '600' },
+  tabLabelActive: { color: '#003B33' },
+  tabLabelInactive: { color: '#8B95A5' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
