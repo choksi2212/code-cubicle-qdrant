@@ -295,6 +295,249 @@ c_abi_export!(fe_wal_append, wal_append, wal_path: String, entry_json: String);
 c_abi_export!(fe_wal_read_all, wal_read_all, wal_path: String);
 c_abi_export!(fe_wal_clear, wal_clear, wal_path: String);
 
+// ─── Encryption FFI ──────────────────────────────────────────────────────────
+//
+// `fe_key_init`:   install a raw 32-byte key in process-global state
+//                  (test / dev only). Returns 0 on success, -1 on length
+//                  mismatch, -2 on null pointer.
+// `fe_key_from_keystore`: returns a heap-allocated copy of the 32-byte
+//                  key material bound to `alias` in Android Keystore.
+//                  Caller frees with `fe_key_free`. On error returns
+//                  NULL (callers must check).
+// `fe_key_free`:   frees the buffer returned by `fe_key_from_keystore`.
+// `fe_cipher_encrypt` / `fe_cipher_decrypt`: AEAD using the process-global
+//                  key. `out` must have capacity ≥ input + 28 bytes;
+//                  `*out_len` is updated with the actual length on success.
+
+use crate::storage::encryption::{AesGcmCipher, Cipher, KEY_LEN};
+use parking_lot::Mutex;
+
+static GLOBAL_CIPHER: OnceLock<Mutex<Option<AesGcmCipher>>> = OnceLock::new();
+
+fn cipher_slot() -> &'static Mutex<Option<AesGcmCipher>> {
+    GLOBAL_CIPHER.get_or_init(|| Mutex::new(None))
+}
+
+/// Test/dev helper: install a 32-byte raw key into the process-global
+/// cipher slot. Production code never calls this — it goes through
+/// `fe_key_from_keystore` so the key bytes come from the Secure Hardware.
+#[no_mangle]
+pub extern "C" fn fe_key_init(raw_bytes: *const u8, len: usize) -> i32 {
+    if raw_bytes.is_null() || len != KEY_LEN {
+        return -1;
+    }
+    let mut key = [0u8; KEY_LEN];
+    unsafe {
+        std::ptr::copy_nonoverlapping(raw_bytes, key.as_mut_ptr(), KEY_LEN);
+    }
+    *cipher_slot().lock() = Some(AesGcmCipher::new(key));
+    0
+}
+
+/// Fetch the key bound to `alias` in Android Keystore. The returned
+/// buffer is a heap-allocated copy of the raw key bytes — caller frees
+/// with [`fe_key_free`]. On error (alias missing, target unsupported,
+/// JNI failure) returns NULL.
+///
+/// Layout: the allocation is `[len: usize][bytes...]`. The returned
+/// pointer points at the first byte of `bytes`; `fe_key_free` reads the
+/// preceding `usize` to recover the slice length. This avoids an
+/// auxiliary lookup table.
+///
+/// On Android the bytes are obtained by first registering them via the
+/// JNI bridge (Kotlin calls `installKeystoreKeyNative` after fetching
+/// the alias from `AndroidKeyStore`). On non-Android targets this
+/// returns NULL — tests use [`fe_key_init`] directly.
+#[no_mangle]
+pub extern "C" fn fe_key_from_keystore(alias: *const std::os::raw::c_char) -> *mut u8 {
+    let alias_owned = match unsafe { c_str_to_owned(alias) } {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    match fe_key_from_keystore_bytes(&alias_owned) {
+        Ok(bytes) => {
+            let len = bytes.len();
+            let total = std::mem::size_of::<usize>() + len;
+            unsafe {
+                let raw = std::alloc::alloc(std::alloc::Layout::from_size_align(total, 8).unwrap());
+                if raw.is_null() {
+                    return std::ptr::null_mut();
+                }
+                (raw as *mut usize).write(len);
+                let payload_ptr = raw.add(std::mem::size_of::<usize>());
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), payload_ptr, len);
+                payload_ptr
+            }
+        }
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+/// Free a buffer returned by [`fe_key_from_keystore`]. Safe to call
+/// with NULL (no-op).
+#[no_mangle]
+pub extern "C" fn fe_key_free(ptr: *mut u8) {
+    if ptr.is_null() {
+        return;
+    }
+    unsafe {
+        let header_ptr = ptr.sub(std::mem::size_of::<usize>());
+        let len = (header_ptr as *const usize).read();
+        let total = std::mem::size_of::<usize>() + len;
+        std::alloc::dealloc(
+            header_ptr,
+            std::alloc::Layout::from_size_align(total, 8).unwrap(),
+        );
+    }
+}
+
+/// Android-only: fetch the raw key bytes for the Keystore `alias`.
+///
+/// On Android, `FieldEdgeRustModule.feKeyFromKeystore` (Kotlin) does
+/// the actual Android Keystore work and then calls
+/// `installKeystoreKeyNative` to push the bytes into [`INSTALLED_KEY`].
+/// This function returns those bytes when the alias matches.
+///
+/// On non-Android targets it returns
+/// `KeyRingError::KeystoreUnavailable` — production Rust code that
+/// runs on Android ships with `target_os = "android"`; CI/desktop
+/// builds use [`KeyRing::from_raw_key`] instead.
+pub fn fe_key_from_keystore_bytes(alias: &str) -> Result<Vec<u8>, crate::storage::keyring::KeyRingError> {
+    #[cfg(target_os = "android")]
+    {
+        let slot = installed_key_slot();
+        let guard = slot.lock();
+        match guard.as_ref() {
+            Some((stored_alias, bytes)) if stored_alias == alias => Ok(bytes.clone()),
+            _ => Err(crate::storage::keyring::KeyRingError::AliasNotFound(
+                alias.to_string(),
+            )),
+        }
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = alias;
+        Err(crate::storage::keyring::KeyRingError::KeystoreUnavailable)
+    }
+}
+
+/// Storage for the Android-side key installation. Populated by
+/// [`Java_com_fieldedge_edge_FieldEdgeRustModule_installKeystoreKeyNative`]
+/// and read by [`fe_key_from_keystore_bytes`].
+#[cfg(target_os = "android")]
+static INSTALLED_KEY: OnceLock<Mutex<Option<(String, Vec<u8>)>>> = OnceLock::new();
+
+#[cfg(target_os = "android")]
+fn installed_key_slot() -> &'static Mutex<Option<(String, Vec<u8>)>> {
+    INSTALLED_KEY.get_or_init(|| Mutex::new(None))
+}
+
+/// JNI entry point that Kotlin's `FieldEdgeRustModule.feKeyFromKeystore`
+/// calls after fetching the raw key from Android Keystore. The bytes
+/// are stored in [`INSTALLED_KEY`] under `alias` so Rust callers can
+/// pull them via [`fe_key_from_keystore_bytes`].
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub extern "C" fn Java_com_fieldedge_edge_FieldEdgeRustModule_installKeystoreKeyNative(
+    mut env: EnvUnowned<'_>,
+    _cls: jni::objects::JClass,
+    alias: JString<'_>,
+    bytes: JByteArray<'_>,
+) -> jboolean {
+    let mut alias_owned = String::new();
+    let mut ok = false;
+    let _ = env.with_env(|env| -> Result<(), jni::errors::Error> {
+        alias_owned = env
+            .get_string(&alias)
+            .map(|s| String::from(s.to_string()))
+            .unwrap_or_default();
+        let len = env.get_array_length(&bytes).unwrap_or(0);
+        let mut buf = vec![0u8; len as usize];
+        env.get_byte_array_region(&bytes, 0, &mut buf).ok();
+        *installed_key_slot().lock() = Some((alias_owned.clone(), buf));
+        ok = true;
+        Ok(())
+    });
+    if ok {
+        jni::sys::JNI_TRUE
+    } else {
+        jni::sys::JNI_FALSE
+    }
+}
+
+/// Encrypt `plaintext_len` bytes at `plaintext` into `out`, which must
+/// have capacity `out_len` (≥ plaintext_len + 28). On success, `*out_len`
+/// is set to the ciphertext length and 0 is returned. On error a
+/// negative integer is returned.
+#[no_mangle]
+pub extern "C" fn fe_cipher_encrypt(
+    plaintext: *const u8,
+    plaintext_len: usize,
+    out: *mut u8,
+    out_len: *mut usize,
+) -> i32 {
+    if plaintext.is_null() || out.is_null() || out_len.is_null() {
+        return -1;
+    }
+    let guard = cipher_slot().lock();
+    let cipher = match guard.as_ref() {
+        Some(c) => c,
+        None => return -2, // no key initialized
+    };
+    let pt = unsafe { std::slice::from_raw_parts(plaintext, plaintext_len) };
+    let ct = cipher.encrypt(pt, b"fieldedge/ffi/v1");
+    let needed = ct.len();
+    let cap = unsafe { *out_len };
+    if cap < needed {
+        unsafe {
+            *out_len = needed;
+        }
+        return -3; // output buffer too small
+    }
+    unsafe {
+        std::ptr::copy_nonoverlapping(ct.as_ptr(), out, needed);
+        *out_len = needed;
+    }
+    0
+}
+
+/// Decrypt `ciphertext_len` bytes at `ciphertext` into `out`. On success,
+/// `*out_len` is set to the plaintext length and 0 is returned.
+#[no_mangle]
+pub extern "C" fn fe_cipher_decrypt(
+    ciphertext: *const u8,
+    ciphertext_len: usize,
+    out: *mut u8,
+    out_len: *mut usize,
+) -> i32 {
+    if ciphertext.is_null() || out.is_null() || out_len.is_null() {
+        return -1;
+    }
+    let guard = cipher_slot().lock();
+    let cipher = match guard.as_ref() {
+        Some(c) => c,
+        None => return -2,
+    };
+    let ct = unsafe { std::slice::from_raw_parts(ciphertext, ciphertext_len) };
+    let pt = match cipher.decrypt(ct, b"fieldedge/ffi/v1") {
+        Ok(p) => p,
+        Err(_) => return -4, // tag mismatch / bad format
+    };
+    let needed = pt.len();
+    let cap = unsafe { *out_len };
+    if cap < needed {
+        unsafe {
+            *out_len = needed;
+        }
+        return -3;
+    }
+    unsafe {
+        std::ptr::copy_nonoverlapping(pt.as_ptr(), out, needed);
+        *out_len = needed;
+    }
+    0
+}
+
 #[no_mangle]
 pub extern "C" fn fe_version() -> *mut std::os::raw::c_char {
     let result = version();
@@ -450,9 +693,9 @@ pub extern "C" fn fe_invoke1_i64(func_ptr: usize, a: *const std::os::raw::c_char
 #[cfg(target_os = "android")]
 use jni::EnvUnowned;
 #[cfg(target_os = "android")]
-use jni::objects::JString;
+use jni::objects::{JByteArray, JString};
 #[cfg(target_os = "android")]
-use jni::sys::jstring;
+use jni::sys::{jboolean, jstring};
 
 // All JNI native-method shims below are Android-only. We cfg-gate the entire
 // block so the test binary on Linux/macOS/Windows doesn't try to link

@@ -8,9 +8,12 @@
 
 pub mod adapter;
 
-pub use adapter::{EdgeError, EdgeOps, Filter, Point, QueryRequest, ScoredPoint};
+pub use adapter::{
+    EncryptedInMemoryEdge, EncryptedShardError, EdgeError, EdgeOps, Filter, Point, QueryRequest,
+    ScoredPoint, ENCRYPTED_SNAPSHOT_FILE, SHARD_AAD,
+};
 
-/// Open the local edge shard.
+/// Open the local edge shard (plaintext).
 pub fn open_shard(directory: &str) -> Result<Box<dyn EdgeOps>, EdgeError> {
     adapter::open_shard(directory)
 }

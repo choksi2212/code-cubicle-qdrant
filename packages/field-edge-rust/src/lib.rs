@@ -11,6 +11,7 @@ pub mod edge;
 pub mod sync;
 pub mod conflict;
 pub mod wal;
+pub mod storage;
 pub mod models;
 pub mod crypto;
 pub mod ffi;
