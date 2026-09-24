@@ -12,6 +12,7 @@
  */
 
 import React from 'react';
+import { safeStringify, findPressableWithText } from './helpers/testHelpers';
 import renderer, { act } from 'react-test-renderer';
 
 import { SyncReportScreen } from '../src/screens/SyncReportScreen';
@@ -44,7 +45,7 @@ describe('SyncReportScreen — empty state', () => {
     const tree = renderer.create(
       <SyncReportScreen report={null} onClose={() => {}} />,
     );
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('No sync yet');
     expect(json).toContain('Close');
   });
@@ -56,7 +57,7 @@ describe('SyncReportScreen — hero headline', () => {
       <SyncReportScreen report={makeReport()} onClose={() => {}} />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('All synced');
   });
 
@@ -76,7 +77,7 @@ describe('SyncReportScreen — hero headline', () => {
       />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('Partial sync');
   });
 
@@ -88,7 +89,7 @@ describe('SyncReportScreen — hero headline', () => {
       />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('Sync failed');
   });
 });
@@ -99,7 +100,7 @@ describe('SyncReportScreen — metrics grid', () => {
       <SyncReportScreen report={makeReport()} onClose={() => {}} />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('Uploaded');
     expect(json).toContain('Downloaded');
     expect(json).toContain('Conflicts');
@@ -111,7 +112,7 @@ describe('SyncReportScreen — metrics grid', () => {
       <SyncReportScreen report={makeReport()} onClose={() => {}} />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     // 10240 bytes = 10.0 KB, 4096 bytes = 4.0 KB
     expect(json).toContain('10.0');
     expect(json).toContain('KB');
@@ -123,7 +124,7 @@ describe('SyncReportScreen — metrics grid', () => {
       <SyncReportScreen report={makeReport()} onClose={() => {}} />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('Done');
   });
 });
@@ -134,7 +135,7 @@ describe('SyncReportScreen — conflicts list', () => {
       <SyncReportScreen report={makeReport()} onClose={() => {}} />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     // The Conflicts section label is uppercase "CONFLICTS" — it should
     // not appear when there are no conflicts.
     expect(json).not.toContain('Conflicts\n');
@@ -156,7 +157,7 @@ describe('SyncReportScreen — conflicts list', () => {
       />,
     );
     await settle();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('550e8400');
     expect(json).toContain('local');
     expect(json).toContain('enrichment_text');
@@ -180,32 +181,12 @@ describe('SyncReportScreen — conflicts list', () => {
       />,
     );
     await settle();
-    // Walk the tree to find any Pressable and tap the first one whose
-    // toJSON() includes the photo_id. Avoid JSON.stringify on raw
-    // ReactTestInstance (it has circular _fiber refs).
-    const root = tree.root;
-    let tapped = false;
-    const walk = (node: any) => {
-      if (tapped) return;
-      if (typeof node.props?.onPress === 'function') {
-        let s = '';
-        try {
-          s = JSON.stringify(node.toJSON ? node.toJSON() : node);
-        } catch {
-          s = '';
-        }
-        if (s.includes('550e8400')) {
-          act(() => node.props.onPress());
-          tapped = true;
-          return;
-        }
-      }
-      const children = node.children || [];
-      for (const child of children) {
-        if (child && typeof child === 'object') walk(child);
-      }
-    };
-    walk(root);
+    // Walk the tree without JSON.stringify (reanimated shared values
+    // create circular refs). Look for any Pressable whose subtree
+    // contains the conflict row's photo_id.
+    const target = findPressableWithText(tree.root, '550e8400');
+    expect(target).not.toBeNull();
+    act(() => target.props.onPress());
     expect(onOpenConflict).toHaveBeenCalledWith(
       '550e8400-e29b-41d4-a716-446655440000',
     );

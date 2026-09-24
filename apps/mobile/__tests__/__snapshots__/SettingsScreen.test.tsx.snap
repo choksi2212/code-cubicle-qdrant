@@ -25,6 +25,7 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
     }
   >
     <Pressable
+      accessibilityRole="button"
       hitSlop={12}
       onPress={[Function]}
       onPressIn={[Function]}
@@ -56,12 +57,23 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
             }
           }
         >
-          <Icon
-            color="#B4BCCC"
-            name="ChevronLeft"
-            size={16}
+          <Svg
+            accessibilityLabel="ChevronLeft"
+            fill="none"
+            height={16}
+            stroke="#B4BCCC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={16}
+          >
+            <Polyline
+              points="15 18 9 12 15 6"
+              stroke="#B4BCCC"
+              strokeWidth={2}
+            />
+          </Svg>
           <Text
             style={
               {
@@ -171,12 +183,31 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           }
         }
       >
-        <Icon
-          color="#F7F9FC"
-          name="Power"
-          size={16}
+        <Svg
+          accessibilityLabel="Power"
+          fill="none"
+          height={16}
+          stroke="#F7F9FC"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Path
+            d="M18.36 6.64a9 9 0 1 1-12.73 0"
+            stroke="#F7F9FC"
+            strokeWidth={2}
+          />
+          <Line
+            stroke="#F7F9FC"
+            strokeWidth={2}
+            x1={12}
+            x2={12}
+            y1={2}
+            y2={12}
+          />
+        </Svg>
         <Text
           style={
             [
@@ -217,12 +248,30 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           }
         }
       >
-        <Icon
-          color="#677289"
-          name="Clock"
-          size={16}
+        <Svg
+          accessibilityLabel="Clock"
+          fill="none"
+          height={16}
+          stroke="#677289"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Circle
+            cx={12}
+            cy={12}
+            r={10}
+            stroke="#677289"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="12 6 12 12 16 14"
+            stroke="#677289"
+            strokeWidth={2}
+          />
+        </Svg>
         <Text
           style={
             [
@@ -263,12 +312,30 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           }
         }
       >
-        <Icon
-          color="#677289"
-          name="Clock"
-          size={16}
+        <Svg
+          accessibilityLabel="Clock"
+          fill="none"
+          height={16}
+          stroke="#677289"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Circle
+            cx={12}
+            cy={12}
+            r={10}
+            stroke="#677289"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="12 6 12 12 16 14"
+            stroke="#677289"
+            strokeWidth={2}
+          />
+        </Svg>
         <Text
           style={
             [
@@ -309,12 +376,30 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           }
         }
       >
-        <Icon
-          color="#677289"
-          name="Clock"
-          size={16}
+        <Svg
+          accessibilityLabel="Clock"
+          fill="none"
+          height={16}
+          stroke="#677289"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Circle
+            cx={12}
+            cy={12}
+            r={10}
+            stroke="#677289"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="12 6 12 12 16 14"
+            stroke="#677289"
+            strokeWidth={2}
+          />
+        </Svg>
         <Text
           style={
             [
@@ -365,12 +450,30 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           }
         }
       >
-        <Icon
-          color="#677289"
-          name="Clock"
-          size={16}
+        <Svg
+          accessibilityLabel="Clock"
+          fill="none"
+          height={16}
+          stroke="#677289"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Circle
+            cx={12}
+            cy={12}
+            r={10}
+            stroke="#677289"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="12 6 12 12 16 14"
+            stroke="#677289"
+            strokeWidth={2}
+          />
+        </Svg>
         <Text
           style={
             {
@@ -410,12 +513,33 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           }
         }
       >
-        <Icon
-          color="#677289"
-          name="RefreshCw"
-          size={16}
+        <Svg
+          accessibilityLabel="RefreshCw"
+          fill="none"
+          height={16}
+          stroke="#677289"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Polyline
+            points="23 4 23 10 17 10"
+            stroke="#677289"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="1 20 1 14 7 14"
+            stroke="#677289"
+            strokeWidth={2}
+          />
+          <Path
+            d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+            stroke="#677289"
+            strokeWidth={2}
+          />
+        </Svg>
         <Text
           style={
             {
@@ -534,12 +658,52 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           ]
         }
       >
-        <Icon
-          color="#677289"
-          name="Server"
-          size={16}
+        <Svg
+          accessibilityLabel="Server"
+          fill="none"
+          height={16}
+          stroke="#677289"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Rect
+            height={8}
+            rx={2}
+            stroke="#677289"
+            strokeWidth={2}
+            width={20}
+            x={2}
+            y={2}
+          />
+          <Rect
+            height={8}
+            rx={2}
+            stroke="#677289"
+            strokeWidth={2}
+            width={20}
+            x={2}
+            y={14}
+          />
+          <Line
+            stroke="#677289"
+            strokeWidth={2}
+            x1={6}
+            x2={6.01}
+            y1={6}
+            y2={6}
+          />
+          <Line
+            stroke="#677289"
+            strokeWidth={2}
+            x1={6}
+            x2={6.01}
+            y1={18}
+            y2={18}
+          />
+        </Svg>
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}
@@ -648,12 +812,23 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           ]
         }
       >
-        <Icon
-          color="#FFFFFF"
-          name="Check"
-          size={16}
+        <Svg
+          accessibilityLabel="Check"
+          fill="none"
+          height={16}
+          stroke="#FFFFFF"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Polyline
+            points="20 6 9 17 4 12"
+            stroke="#FFFFFF"
+            strokeWidth={2}
+          />
+        </Svg>
         <Text
           numberOfLines={1}
           style={
@@ -759,12 +934,26 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           onPress={[Function]}
           style={[Function]}
         >
-          <Icon
-            color="#F7F9FC"
-            name="Minus"
-            size={20}
+          <Svg
+            accessibilityLabel="Minus"
+            fill="none"
+            height={20}
+            stroke="#F7F9FC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={20}
+          >
+            <Line
+              stroke="#F7F9FC"
+              strokeWidth={2}
+              x1={5}
+              x2={19}
+              y1={12}
+              y2={12}
+            />
+          </Svg>
         </Pressable>
         <Pressable
           accessibilityLabel="Decrease by 1"
@@ -774,12 +963,26 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           onPress={[Function]}
           style={[Function]}
         >
-          <Icon
-            color="#F7F9FC"
-            name="Minus"
-            size={20}
+          <Svg
+            accessibilityLabel="Minus"
+            fill="none"
+            height={20}
+            stroke="#F7F9FC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={20}
+          >
+            <Line
+              stroke="#F7F9FC"
+              strokeWidth={2}
+              x1={5}
+              x2={19}
+              y1={12}
+              y2={12}
+            />
+          </Svg>
         </Pressable>
         <View
           style={
@@ -815,12 +1018,34 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           onPress={[Function]}
           style={[Function]}
         >
-          <Icon
-            color="#F7F9FC"
-            name="Plus"
-            size={20}
+          <Svg
+            accessibilityLabel="Plus"
+            fill="none"
+            height={20}
+            stroke="#F7F9FC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={20}
+          >
+            <Line
+              stroke="#F7F9FC"
+              strokeWidth={2}
+              x1={12}
+              x2={12}
+              y1={5}
+              y2={19}
+            />
+            <Line
+              stroke="#F7F9FC"
+              strokeWidth={2}
+              x1={5}
+              x2={19}
+              y1={12}
+              y2={12}
+            />
+          </Svg>
         </Pressable>
         <Pressable
           accessibilityLabel="Increase by 100"
@@ -830,12 +1055,34 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           onPress={[Function]}
           style={[Function]}
         >
-          <Icon
-            color="#F7F9FC"
-            name="Plus"
-            size={20}
+          <Svg
+            accessibilityLabel="Plus"
+            fill="none"
+            height={20}
+            stroke="#F7F9FC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={20}
+          >
+            <Line
+              stroke="#F7F9FC"
+              strokeWidth={2}
+              x1={12}
+              x2={12}
+              y1={5}
+              y2={19}
+            />
+            <Line
+              stroke="#F7F9FC"
+              strokeWidth={2}
+              x1={5}
+              x2={19}
+              y1={12}
+              y2={12}
+            />
+          </Svg>
         </Pressable>
       </View>
     </View>
@@ -1042,12 +1289,36 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           ]
         }
       >
-        <Icon
-          color="#EF4444"
-          name="LogOut"
-          size={16}
+        <Svg
+          accessibilityLabel="LogOut"
+          fill="none"
+          height={16}
+          stroke="#EF4444"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Path
+            d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+            stroke="#EF4444"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="16 17 21 12 16 7"
+            stroke="#EF4444"
+            strokeWidth={2}
+          />
+          <Line
+            stroke="#EF4444"
+            strokeWidth={2}
+            x1={21}
+            x2={9}
+            y1={12}
+            y2={12}
+          />
+        </Svg>
         <Text
           numberOfLines={1}
           style={
@@ -1188,12 +1459,33 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           ]
         }
       >
-        <Icon
-          color="#6366F1"
-          name="RefreshCw"
-          size={16}
+        <Svg
+          accessibilityLabel="RefreshCw"
+          fill="none"
+          height={16}
+          stroke="#6366F1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={16}
+        >
+          <Polyline
+            points="23 4 23 10 17 10"
+            stroke="#6366F1"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="1 20 1 14 7 14"
+            stroke="#6366F1"
+            strokeWidth={2}
+          />
+          <Path
+            d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+            stroke="#6366F1"
+            strokeWidth={2}
+          />
+        </Svg>
         <Text
           numberOfLines={1}
           style={

@@ -12,6 +12,7 @@
  */
 
 import React from 'react';
+import { safeStringify, findPressableWithText } from './helpers/testHelpers';
 import renderer, { act } from 'react-test-renderer';
 
 jest.mock('../src/services/api', () => ({
@@ -83,7 +84,7 @@ describe('LoginScreen', () => {
       btn!.props.onPress();
     });
 
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('at least 8 characters');
     expect(mockedFetch).not.toHaveBeenCalled();
     expect(onSignedIn).not.toHaveBeenCalled();
@@ -146,7 +147,7 @@ describe('LoginScreen', () => {
     });
 
     expect(onSignedIn).not.toHaveBeenCalled();
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('device_token');
   });
 });

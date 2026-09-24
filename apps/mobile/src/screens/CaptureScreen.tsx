@@ -149,7 +149,7 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <PressableScale onPress={onCancel} hitSlop={12}>
+          <PressableScale onPress={onCancel} hitSlop={12} accessibilityLabel="Back">
             <View style={styles.backRow}>
               <Icon name="ChevronLeft" size="sm" color={colors.textSecondary} />
               <Text style={styles.backLabel}>Back</Text>

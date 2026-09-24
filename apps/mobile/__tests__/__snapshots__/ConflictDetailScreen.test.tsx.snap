@@ -19,6 +19,7 @@ exports[`ConflictDetailScreen matches the locked layout snapshot once the fetch 
     }
   >
     <Pressable
+      accessibilityRole="button"
       hitSlop={12}
       onPress={[Function]}
       onPressIn={[Function]}
@@ -50,12 +51,23 @@ exports[`ConflictDetailScreen matches the locked layout snapshot once the fetch 
             }
           }
         >
-          <Icon
-            color="#B4BCCC"
-            name="ChevronLeft"
-            size={16}
+          <Svg
+            accessibilityLabel="ChevronLeft"
+            fill="none"
+            height={16}
+            stroke="#B4BCCC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={16}
+          >
+            <Polyline
+              points="15 18 9 12 15 6"
+              stroke="#B4BCCC"
+              strokeWidth={2}
+            />
+          </Svg>
           <Text
             style={
               {
@@ -149,12 +161,23 @@ exports[`ConflictDetailScreen matches the locked layout snapshot once the fetch 
           ]
         }
       >
-        <Icon
-          color="#3B82F6"
-          name="ChevronLeft"
-          size={20}
+        <Svg
+          accessibilityLabel="ChevronLeft"
+          fill="none"
+          height={20}
+          stroke="#3B82F6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={20}
+        >
+          <Polyline
+            points="15 18 9 12 15 6"
+            stroke="#3B82F6"
+            strokeWidth={2}
+          />
+        </Svg>
       </View>
       <Text
         style={

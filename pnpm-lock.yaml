@@ -31,9 +31,6 @@ importers:
       '@react-native/gradle-plugin':
         specifier: 0.74.85
         version: 0.74.85
-      lucide-react-native:
-        specifier: ^1.48.0
-        version: 1.48.0(react-native-svg@15.15.5(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0))(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -43,9 +40,6 @@ importers:
       react-native-fs:
         specifier: ^2.20.0
         version: 2.20.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))
-      react-native-gesture-handler:
-        specifier: ^3.3.0
-        version: 3.3.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
       react-native-get-random-values:
         specifier: 1.11.0
         version: 1.11.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))
@@ -53,11 +47,14 @@ importers:
         specifier: ^8.2.1
         version: 8.2.1(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
       react-native-reanimated:
-        specifier: ~3.16.0
-        version: 3.16.7(@babel/core@7.29.7)(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
+        specifier: 3.10.1
+        version: 3.10.1(@babel/core@7.29.7)(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
       react-native-safe-area-context:
         specifier: ^4.10.5
         version: 4.10.5(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
+      react-native-svg:
+        specifier: 12.5.1
+        version: 12.5.1(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
       ulid:
         specifier: ^2.3.0
         version: 2.4.0
@@ -1404,9 +1401,6 @@ packages:
 
   '@types/react-test-renderer@18.3.1':
     resolution: {integrity: sha512-vAhnk0tG2eGa37lkU9+s5SoroCsRI08xnsWFiAXOuPH2jqzMbcXvKExXViPi1P5fIklDeCvXqyrdmipFaSkZrA==}
-
-  '@types/react-test-renderer@19.3.0':
-    resolution: {integrity: sha512-TX4p2D4Z2oigM3SXU7+QyLSUnSR0vR1S1Pfxm/qFL9nHQ3jclgi6ioGoWQmlIr1DeKRVmPJrmNlhgM0JlWlLUg==}
 
   '@types/react@18.3.31':
     resolution: {integrity: sha512-vfEqpXTvwT91yhmwdfouStN2hSKwTvyRs8qpLfADyrq/kxDw0hZM7Wk9Ug1FELj8hIby+S/+kQCSRFF32nv2Qw==}
@@ -2973,13 +2967,6 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react-native@1.48.0:
-    resolution: {integrity: sha512-/URnAnnF+Nshnu1OXSvSuT+boZ7pjr+zYLjQtW4GL72IxzcecIT5mC7X5i35mWBz4bHrnIDGitIR8Wt9clN9Hw==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-native: '*'
-      react-native-svg: ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0
-
   make-dir@2.1.0:
     resolution: {integrity: sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA==}
     engines: {node: '>=6'}
@@ -3433,12 +3420,6 @@ packages:
       react-native-windows:
         optional: true
 
-  react-native-gesture-handler@3.3.0:
-    resolution: {integrity: sha512-ZCTlJ09nE3GPbm7J74lvwpxmx1TQ/7MDlHZNLARVYTN82k21mJUJ7BmI9eWjEi8eevHiAudI5O1Cpnt0rJfoJA==}
-    peerDependencies:
-      react: '*'
-      react-native: '*'
-
   react-native-get-random-values@1.11.0:
     resolution: {integrity: sha512-4BTbDbRmS7iPdhYLRcz3PGFIpFJBwNZg9g42iwa2P6FOv9vZj/xJc678RZXnLNZzd0qd7Q3CCF6Yd+CU2eoXKQ==}
     peerDependencies:
@@ -3450,8 +3431,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-reanimated@3.16.7:
-    resolution: {integrity: sha512-qoUUQOwE1pHlmQ9cXTJ2MX9FQ9eHllopCLiWOkDkp6CER95ZWeXhJCP4cSm6AD4jigL5jHcZf/SkWrg8ttZUsw==}
+  react-native-reanimated@3.10.1:
+    resolution: {integrity: sha512-sfxg6vYphrDc/g4jf/7iJ7NRi+26z2+BszPmvmk0Vnrz6FL7HYljJqTf531F1x6tFmsf+FEAmuCtTUIXFLVo9w==}
     peerDependencies:
       '@babel/core': ^7.0.0-0
       react: '*'
@@ -3463,11 +3444,11 @@ packages:
       react: '*'
       react-native: '*'
 
-  react-native-svg@15.15.5:
-    resolution: {integrity: sha512-L4go5jA+GWutdJ/JucuN20cjAbMg1HmMtAP+wZ+3JLCf6Jd0bhXQHxciRP/AQm/FlrIEZwkMcHNZP+FXAiic0w==}
+  react-native-svg@12.5.1:
+    resolution: {integrity: sha512-c374ENsq2MWCfr+7jC7TGwSeOAuC1Dp0osh2pw8PjpYFxmmB/toFIwcnCLz+SgBd6iLJClRhbATealqM05HOGg==}
     peerDependencies:
       react: '*'
-      react-native: '*'
+      react-native: '>=0.50.0'
 
   react-native@0.74.5:
     resolution: {integrity: sha512-Bgg2WvxaGODukJMTZFTZBNMKVaROHLwSb8VAGEdrlvKwfb1hHg/3aXTUICYk7dwgAnb+INbGMwnF8yeAgIUmqw==}
@@ -5925,10 +5906,6 @@ snapshots:
     dependencies:
       '@types/react': 18.3.31
 
-  '@types/react-test-renderer@19.3.0':
-    dependencies:
-      '@types/react': 18.3.31
-
   '@types/react@18.3.31':
     dependencies:
       '@types/prop-types': 15.7.15
@@ -7931,12 +7908,6 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react-native@1.48.0(react-native-svg@15.15.5(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0))(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0):
-    dependencies:
-      react: 18.2.0
-      react-native: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0)
-      react-native-svg: 15.15.5(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0)
-
   make-dir@2.1.0:
     dependencies:
       pify: 4.0.1
@@ -8467,13 +8438,6 @@ snapshots:
       react-native: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0)
       utf8: 3.0.0
 
-  react-native-gesture-handler@3.3.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0):
-    dependencies:
-      '@types/react-test-renderer': 19.3.0
-      invariant: 2.2.4
-      react: 18.2.0
-      react-native: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0)
-
   react-native-get-random-values@1.11.0(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0)):
     dependencies:
       fast-base64-decode: 1.0.0
@@ -8484,17 +8448,14 @@ snapshots:
       react: 18.2.0
       react-native: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0)
 
-  react-native-reanimated@3.16.7(@babel/core@7.29.7)(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0):
+  react-native-reanimated@3.10.1(@babel/core@7.29.7)(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0):
     dependencies:
       '@babel/core': 7.29.7
       '@babel/plugin-transform-arrow-functions': 7.29.7(@babel/core@7.29.7)
-      '@babel/plugin-transform-class-properties': 7.29.7(@babel/core@7.29.7)
-      '@babel/plugin-transform-classes': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-nullish-coalescing-operator': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-optional-chaining': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-shorthand-properties': 7.29.7(@babel/core@7.29.7)
       '@babel/plugin-transform-template-literals': 7.29.7(@babel/core@7.29.7)
-      '@babel/plugin-transform-unicode-regex': 7.29.7(@babel/core@7.29.7)
       '@babel/preset-typescript': 7.29.7(@babel/core@7.29.7)
       convert-source-map: 2.0.0
       invariant: 2.2.4
@@ -8508,7 +8469,7 @@ snapshots:
       react: 18.2.0
       react-native: 0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0)
 
-  react-native-svg@15.15.5(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0):
+  react-native-svg@12.5.1(react-native@0.74.5(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.2.0))(react@18.2.0):
     dependencies:
       css-select: 5.2.2
       css-tree: 1.1.3

@@ -1,11 +1,12 @@
 /**
  * Icon — verifies that every documented icon name renders, that the
- * size token maps to a numeric pixel size, and that colour overrides
- * pass through to the underlying SVG.
+ * size token maps to a numeric pixel size, and that colour / strokeWidth
+ * overrides pass through to the underlying SVG.
  *
- * The lucide-react-native shim returns a real React element keyed by
- * the icon's displayName, so we assert on the JSON tree's `name` and
- * the `color` / `size` props.
+ * The Icon component is a thin wrapper over react-native-svg primitives.
+ * In jest, those primitives resolve to plain <Svg>/<Path> elements whose
+ * JSON tree contains the width, height, stroke, and strokeWidth props.
+ * We assert on those tree properties.
  */
 
 import React from 'react';
@@ -13,28 +14,26 @@ import renderer from 'react-test-renderer';
 import { Icon } from '../src/components/Icon';
 import { colors } from '../src/theme/tokens';
 
-function nameOf(el: renderer.ReactTestRenderer['root']): string {
-  const tree = el.toJSON();
-  return JSON.stringify(tree);
-}
-
 describe('Icon', () => {
   it('renders a Camera icon with default size and colour', () => {
     const tree = renderer.create(<Icon name="Camera" />).toJSON();
     const json = JSON.stringify(tree);
     expect(json).toContain('Camera');
-    expect(json).toContain(`"size":20`); // md = 20px
+    expect(json).toContain('"width":20'); // md = 20px
+    expect(json).toContain('"height":20');
     expect(json).toContain(colors.textPrimary);
   });
 
   it('maps the xs size to 14px', () => {
     const tree = renderer.create(<Icon name="Camera" size="xs" />).toJSON();
-    expect(JSON.stringify(tree)).toContain('"size":14');
+    expect(JSON.stringify(tree)).toContain('"width":14');
+    expect(JSON.stringify(tree)).toContain('"height":14');
   });
 
   it('maps the xl size to 32px', () => {
     const tree = renderer.create(<Icon name="Camera" size="xl" />).toJSON();
-    expect(JSON.stringify(tree)).toContain('"size":32');
+    expect(JSON.stringify(tree)).toContain('"width":32');
+    expect(JSON.stringify(tree)).toContain('"height":32');
   });
 
   it('passes through an explicit colour', () => {
@@ -64,8 +63,6 @@ describe('Icon', () => {
       'Filter', 'Loader', 'CircleCheck', 'TriangleAlert', 'CircleX',
       'ArrowLeft', 'ArrowRight', 'Ellipsis', 'Smartphone', 'Shield',
       'Power', 'HardDrive', 'Server',
-      // Aliases (Loader2, CheckCircle2, AlertTriangle, XCircle, MoreHorizontal)
-      // map to canonical names internally — covered by the alias test below.
     ];
     for (const name of names) {
       const tree = renderer.create(<Icon name={name as any} />).toJSON();
@@ -78,7 +75,10 @@ describe('Icon', () => {
       const tree = renderer.create(<Icon name={alias as any} />).toJSON();
       expect(tree).toBeTruthy();
     }
-    // sanity: helper consumed
-    expect(nameOf).toBeTruthy();
+  });
+
+  it('renders null for unknown icon names (no throw)', () => {
+    const tree = renderer.create(<Icon name={'DoesNotExist' as any} />).toJSON();
+    expect(tree).toBeNull();
   });
 });

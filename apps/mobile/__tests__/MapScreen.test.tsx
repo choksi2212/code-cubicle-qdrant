@@ -11,6 +11,30 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 
+/**
+ * safeStringify — JSON.stringify with circular-ref and function guards.
+ *
+ * react-test-renderer's toJSON() returns an object tree that contains
+ * React-element props (with `_owner` back-references to the parent fiber)
+ * and function props. Plain JSON.stringify throws "Converting circular
+ * structure to JSON" or returns undefined when handed these. This
+ * replacer drops functions, breaks cycles with WeakSet, and skips React
+ * internal keys so the resulting string is stable for assertions.
+ */
+function safeStringify(value: unknown): string {
+  const seen = new WeakSet();
+  const REACT_INTERNAL_KEYS = new Set(['_owner', '_store', '$$typeof']);
+  return JSON.stringify(value, (key, val) => {
+    if (typeof val === 'function') return undefined;
+    if (key && REACT_INTERNAL_KEYS.has(key)) return undefined;
+    if (val && typeof val === 'object') {
+      if (seen.has(val as object)) return undefined;
+      seen.add(val as object);
+    }
+    return val;
+  });
+}
+
 jest.mock('../src/native/fieldEdge', () => ({
   fieldEdge: {
     retrieve: jest.fn(async () => []),
@@ -116,7 +140,7 @@ describe('MapScreen', () => {
       buildPoint({ id: 'photo-marker', photoId: 'photo-marker', lat: 12.34, lng: 56.78 }),
     ]);
     const root = await mountAndLoad(<MapScreen onBack={() => {}} onOpenPhoto={onOpenPhoto} />);
-    const json = JSON.stringify(root.toJSON());
+    const json = safeStringify(root.toJSON());
     // The marker pin renders the photo id (substring) somewhere in the
     // tree — we don't pin a specific accessibilityLabel because the
     // marker styling is internal to MapScreen.
@@ -127,25 +151,28 @@ describe('MapScreen', () => {
     mockedFieldEdge.retrieve.mockResolvedValueOnce([]);
     const onBack = jest.fn();
     const root = await mountAndLoad(<MapScreen onBack={onBack} onOpenPhoto={() => {}} />);
-    // Walk the tree to find the Pressable wrapping the "Back" text.
+    // Walk the TestInstance tree (avoid JSON.stringify — reanimated's
+    // shared values create circular structures that break it). Look for
+    // any onPress handler whose subtree contains the string 'Back'.
+    const containsBack = (node: any): boolean => {
+      if (node == null) return false;
+      if (typeof node === 'string') return node === 'Back';
+      const kids = (node as any).children || [];
+      for (const k of kids) {
+        if (containsBack(k)) return true;
+      }
+      return false;
+    };
     let pressed = false;
     const walk = (node: any) => {
-      if (pressed) return;
-      if (typeof node.props?.onPress === 'function') {
-        let s = '';
-        try {
-          s = JSON.stringify(node.toJSON ? node.toJSON() : node);
-        } catch {
-          s = '';
-        }
-        if (s.includes('Back')) {
-          act(() => node.props.onPress());
-          pressed = true;
-          return;
-        }
+      if (pressed || !node) return;
+      if (typeof node.props?.onPress === 'function' && containsBack(node)) {
+        act(() => node.props.onPress());
+        pressed = true;
+        return;
       }
-      const children = node.children || [];
-      for (const child of children) {
+      const kids = node.children || [];
+      for (const child of kids) {
         if (child && typeof child === 'object') walk(child);
       }
     };
