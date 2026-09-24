@@ -166,7 +166,7 @@ function MarkerPin({ x, y, size, onPress }: { x: number; y: number; size: number
             onPress();
           }, 120);
         }}
-        accessibilityLabel={`Map marker ${x}:${y}`}
+        accessibilityLabel={`Map marker ${photoId}`}
         style={[styles.marker, { width: size, height: size, borderRadius: size / 2 }]}
       >
         <View style={[styles.markerInner, { width: size / 2, height: size / 2, borderRadius: size / 4 }]} />

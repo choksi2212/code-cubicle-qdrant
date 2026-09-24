@@ -143,11 +143,33 @@ describe('PhotoPreviewScreen', () => {
     const root = await mountAndLoad(
       <PhotoPreviewScreen photoId="p1" onClose={onClose} />,
     );
-    const backText = root.root.findByProps({ children: '← Back' });
-    const pressable = backText.parent;
-    act(() => {
-      (pressable.props as any).onPress();
-    });
+    // The Header's PressableScale wraps the chevron + "Back" Text. Walk the
+    // tree and invoke the FIRST Pressable whose rendered tree contains
+    // the literal "Back" — there is only one such Pressable in this screen.
+    let pressed = false;
+    const walk = (node: any) => {
+      if (pressed) return;
+      if (typeof node.props?.onPress === 'function') {
+        let s = '';
+        try {
+          s = JSON.stringify(node.toJSON ? node.toJSON() : node);
+        } catch {
+          s = '';
+        }
+        // The header back button contains "Back"; the toolbar buttons
+        // (disabled) have no onPress so the function check filters them out.
+        if (s.includes('Back') && s.includes('ChevronLeft')) {
+          act(() => node.props.onPress());
+          pressed = true;
+          return;
+        }
+      }
+      const children = node.children || [];
+      for (const child of children) {
+        if (child && typeof child === 'object') walk(child);
+      }
+    };
+    walk(root.root);
     expect(onClose).toHaveBeenCalled();
   });
 });

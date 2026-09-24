@@ -220,7 +220,11 @@ function StaggerCell({
 
   return (
     <Animated.View style={[styles.cellWrap, animStyle]}>
-      <PressableScale onPress={onPress} style={styles.cell}>
+      <PressableScale
+        onPress={onPress}
+        accessibilityLabel={`Album photo ${cell.photoId}`}
+        style={styles.cell}
+      >
         <Image
           source={{ uri: photoFileUriFromRelative(cell.photoPath) }}
           style={styles.thumb}
