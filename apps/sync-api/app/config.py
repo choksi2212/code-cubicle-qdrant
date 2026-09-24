@@ -1,18 +1,34 @@
 """Application settings via Pydantic."""
 
+import os
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Resolve .env path from repo root
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_ENV_FILE = _REPO_ROOT / ".env"
+# Resolve .env path. Works both:
+#   - local dev: file is at apps/sync-api/app/config.py → parents[2] = repo root
+#   - Docker:    file is at /app/app/config.py           → parents[1] = /app (WORKDIR)
+def _find_env_file() -> Path | None:
+    here = Path(__file__).resolve().parent
+    for ancestor in [here, *here.parents]:
+        candidate = ancestor / ".env"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+_ENV_FILE = _find_env_file()
 
 
 class Settings(BaseSettings):
     """Configuration loaded from environment variables / .env file."""
 
-    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), extra="ignore")
+    # If we found a .env, load it. Otherwise rely on process env (Render
+    # injects secrets as env vars, so this works in production).
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_FILE) if _ENV_FILE else None,
+        extra="ignore",
+    )
 
     # Server
     host: str = "0.0.0.0"
