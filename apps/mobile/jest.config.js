@@ -15,6 +15,12 @@ module.exports = {
     '^.+\\.tsx?$': ['babel-jest', { configFile: './babel.config.js' }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!react-native|@react-native|react-native-fs|@react-native-async-storage)/',
+    'node_modules/(?!react-native|@react-native|@react-native-async-storage|react-native-fs)/',
   ],
+  // Tests mock RNFS, fieldEdge, location, clip, config explicitly — the
+  // bare `react-native` import in capture.ts should still resolve to a
+  // shim so the SyntaxError above doesn't fire.
+  moduleNameMapper: {
+    '^react-native$': '<rootDir>/__mocks__/react-native.js',
+  },
 };

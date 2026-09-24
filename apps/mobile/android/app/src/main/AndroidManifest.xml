@@ -1,7 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -10,7 +9,12 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <uses-feature android:name="android.hardware.camera" android:required="true" />
+    <!--
+        We deliberately do NOT declare CAMERA permission: react-native-image-picker
+        uses the system camera intent, which doesn't require host-app permission.
+        The system camera app handles its own permissions and returns the photo.
+    -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:name=".MainApplication"
