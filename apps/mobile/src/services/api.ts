@@ -12,7 +12,7 @@
 
 import { SYNC_API_URL } from '../config';
 
-const DEFAULT_TIMEOUT_MS = 25_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 export interface UploadResult {
   id: string;

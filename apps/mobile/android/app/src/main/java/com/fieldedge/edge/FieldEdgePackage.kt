@@ -31,7 +31,7 @@ class FieldEdgePackage : BaseReactPackage() {
                     false,  // canOverrideExistingModule
                     false,  // needsEagerInit
                     false,  // isCxxModule
-                    true,   // isTurboModule
+                    false,  // isTurboModule
                 ),
                 "OnnxClip" to ReactModuleInfo(
                     "OnnxClip",
@@ -39,7 +39,7 @@ class FieldEdgePackage : BaseReactPackage() {
                     false,
                     false,
                     false,
-                    true,
+                    false,
                 ),
             )
         }

@@ -26,19 +26,13 @@ const LINKING_ERROR =
   `Native module 'FieldEdgeRust' is not linked. ` +
   `Make sure you have run 'pnpm build:native' and rebuilt the app.`;
 
-// Resolve the native module lazily — NativeModules isn't populated until
-// after the first React bridge tick, so reading it at module-load time
-// races with the TurboModule registration and we end up with a Proxy that
-// throws on every call.
-function getNative(): NativeBridge {
-  const m = (NativeModules as any).FieldEdgeRust;
-  if (m) return m as NativeBridge;
-  return new Proxy({} as NativeBridge, {
-    get() {
-      throw new Error(LINKING_ERROR);
-    },
-  });
-}
+const native: NativeBridge = (NativeModules as any).FieldEdgeRust
+  ? (NativeModules as any).FieldEdgeRust
+  : new Proxy({} as NativeBridge, {
+      get() {
+        throw new Error(LINKING_ERROR);
+      },
+    });
 
 // ─── Public types ────────────────────────────────────────────────────────────
 
@@ -117,39 +111,39 @@ class FieldEdgeClient {
 
   async openShard(config: { directory: string }): Promise<{ status: string }> {
     this.directory = config.directory;
-    return getNative().openShard(config);
+    return native.openShard(config);
   }
 
   async upsertPoints(points: PointInput[]): Promise<{ upserted: number }> {
-    const resp = await getNative().upsertPoints(points);
+    const resp = await native.upsertPoints(points);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? { upserted: 0 };
   }
 
   async query(request: QueryRequest): Promise<QueryHit[]> {
-    const resp = await getNative().query(request);
+    const resp = await native.query(request);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? [];
   }
 
   async retrieve(ids: string[]): Promise<PointInput[]> {
-    const resp = await getNative().retrieve(ids);
+    const resp = await native.retrieve(ids);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? [];
   }
 
   async deletePoints(ids: string[]): Promise<{ deleted: number }> {
-    const resp = await getNative().deletePoints(ids);
+    const resp = await native.deletePoints(ids);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? { deleted: 0 };
   }
 
   async pointCount(): Promise<number> {
-    return getNative().pointCount();
+    return native.pointCount();
   }
 
   async computeSyncDiff(localJson: string, remoteJson: string): Promise<SyncDiff> {
-    const resp = await getNative().computeSyncDiff(localJson, remoteJson);
+    const resp = await native.computeSyncDiff(localJson, remoteJson);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? { to_upload: [], to_download: [], conflicts: [] };
   }
@@ -158,35 +152,35 @@ class FieldEdgeClient {
     local: Payload,
     remote: Payload,
   ): Promise<ConflictDecision> {
-    const resp = await getNative().resolveConflict(JSON.stringify(local), JSON.stringify(remote));
+    const resp = await native.resolveConflict(JSON.stringify(local), JSON.stringify(remote));
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value!;
   }
 
   async walAppend(walPath: string, entryJson: string): Promise<{ seq: number }> {
-    const resp = await getNative().walAppend(walPath, entryJson);
+    const resp = await native.walAppend(walPath, entryJson);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? { seq: 0 };
   }
 
   async walReadAll(walPath: string): Promise<WalEntry[]> {
-    const resp = await getNative().walReadAll(walPath);
+    const resp = await native.walReadAll(walPath);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? [];
   }
 
   async walClear(walPath: string): Promise<{ cleared: boolean; removed_bytes: number }> {
-    const resp = await getNative().walClear(walPath);
+    const resp = await native.walClear(walPath);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? { cleared: false, removed_bytes: 0 };
   }
 
   async version(): Promise<{ status: string; value?: { crate: string; version: string; rust_version: string; features: Record<string, boolean> } }> {
-    return getNative().version();
+    return native.version();
   }
 
   async checksum(vector: number[]): Promise<{ status: string; value?: { checksum: string } }> {
-    return getNative().checksum(vector);
+    return native.checksum(vector);
   }
 }
 
