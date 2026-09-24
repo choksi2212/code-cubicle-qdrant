@@ -8,9 +8,15 @@
  *
  * All requests have a configurable timeout via AbortController so a hung
  * server (e.g. Render cold-start) can't freeze the UI.
+ *
+ * Observability: every request gets a UUID `X-Request-ID` header so the
+ * server can echo it back, and we emit one structured log line with the
+ * response status + duration_ms via the JSON logger.
  */
 
 import { SYNC_API_URL } from '../config';
+import { logger } from '../util/logger';
+import { uuidv4 } from '../util/uuid';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -64,9 +70,10 @@ class ApiClient {
     this.timeoutMs = ms;
   }
 
-  private headers(): Record<string, string> {
+  private headers(requestId: string): Record<string, string> {
     const h: Record<string, string> = {
       'Content-Type': 'application/json',
+      'X-Request-ID': requestId,
     };
     if (this.token) h['Authorization'] = `Bearer ${this.token}`;
     return h;
@@ -87,16 +94,60 @@ class ApiClient {
     }
   }
 
+  /**
+   * Wraps a fetch call with request-id generation + structured logging.
+   * Logs one line on the way out with status + duration_ms; if the server
+   * echoes back an X-Request-ID header (it always does), we surface it
+   * so log shippers can stitch the device trace to the server trace.
+   */
+  private async doFetch(
+    op: string,
+    url: string,
+    init: RequestInit,
+    timeoutMs?: number,
+  ): Promise<Response> {
+    const requestId = uuidv4();
+    const start = Date.now();
+    let status = 0;
+    let responseRequestId: string | null = null;
+    let error: string | undefined;
+    try {
+      const resp = await this.fetchWithTimeout(url, init, timeoutMs);
+      status = resp.status;
+      responseRequestId = resp.headers.get('X-Request-ID');
+      return resp;
+    } catch (e) {
+      status = 0;
+      error = e instanceof Error ? e.message : String(e);
+      throw e;
+    } finally {
+      const durationMs = Date.now() - start;
+      logger.info('http request', {
+        op,
+        url,
+        request_id: requestId,
+        server_request_id: responseRequestId,
+        status,
+        duration_ms: durationMs,
+        ...(error ? { error } : {}),
+      });
+    }
+  }
+
   async uploadBatch(req: {
     device_id: string;
     batch_id: string;
     points: Array<{ id: string; vector: number[]; payload: Record<string, unknown> }>;
   }): Promise<UploadResponse> {
-    const resp = await this.fetchWithTimeout(`${SYNC_API_URL}/sync/upload`, {
-      method: 'POST',
-      headers: this.headers(),
-      body: JSON.stringify(req),
-    });
+    const resp = await this.doFetch(
+      'sync.upload',
+      `${SYNC_API_URL}/sync/upload`,
+      {
+        method: 'POST',
+        headers: this.headers(uuidv4()),
+        body: JSON.stringify(req),
+      },
+    );
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       throw new Error(`Upload failed: ${resp.status} ${body.slice(0, 200)}`);
@@ -117,10 +168,14 @@ class ApiClient {
     qs.push(`limit=${encodeURIComponent(String(params.limit ?? 100))}`);
     const url = `${SYNC_API_URL}/sync/pull?${qs.join('&')}`;
 
-    const resp = await this.fetchWithTimeout(url, {
-      method: 'GET',
-      headers: this.headers(),
-    });
+    const resp = await this.doFetch(
+      'sync.pull',
+      url,
+      {
+        method: 'GET',
+        headers: this.headers(uuidv4()),
+      },
+    );
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       throw new Error(`Pull failed: ${resp.status} ${body.slice(0, 200)}`);
@@ -129,10 +184,14 @@ class ApiClient {
   }
 
   async heartbeat(): Promise<HeartbeatResponse> {
-    const resp = await this.fetchWithTimeout(`${SYNC_API_URL}/sync/heartbeat`, {
-      method: 'GET',
-      headers: this.headers(),
-    });
+    const resp = await this.doFetch(
+      'sync.heartbeat',
+      `${SYNC_API_URL}/sync/heartbeat`,
+      {
+        method: 'GET',
+        headers: this.headers(uuidv4()),
+      },
+    );
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       throw new Error(`Heartbeat failed: ${resp.status} ${body.slice(0, 200)}`);
@@ -150,11 +209,15 @@ class ApiClient {
     batch_id: string;
     points: Array<{ id: string; vector: number[]; payload: Record<string, unknown> }>;
   }): Promise<UploadResponse> {
-    const resp = await this.fetchWithTimeout(`${SYNC_API_URL}/sync/wal/replay`, {
-      method: 'POST',
-      headers: this.headers(),
-      body: JSON.stringify({ ...req, replay: true }),
-    });
+    const resp = await this.doFetch(
+      'sync.wal_replay',
+      `${SYNC_API_URL}/sync/wal/replay`,
+      {
+        method: 'POST',
+        headers: this.headers(uuidv4()),
+        body: JSON.stringify({ ...req, replay: true }),
+      },
+    );
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       throw new Error(`WAL replay failed: ${resp.status} ${body.slice(0, 200)}`);

@@ -381,4 +381,64 @@ class FieldEdgeRustModule(reactContext: ReactApplicationContext) :
             }
         }
     }
+
+    /**
+     * Structured-log line. Forwarded to Android logcat under tag
+     * "field_edge" so it's visible in `adb logcat | grep field_edge`.
+     *
+     * The Rust observability module (`packages/field-edge-rust/src/observability`)
+     * emits the same JSON shape to stderr; logcat captures both, so
+     * operators see one consistent stream regardless of whether the line
+     * originated in Rust (WAL, sync, conflict) or Kotlin (this method).
+     *
+     * Signature:
+     *   level:    "DEBUG" | "INFO" | "WARN" | "ERROR" (case-insensitive)
+     *   msg:      human-readable line
+     *   kv:       ReadableMap of {key: string} pairs (values are stringified)
+     *
+     * Returns a Promise so callers can `await` it from JS if they want
+     * ordering. The Log.println call itself is synchronous and fast.
+     */
+    @ReactMethod
+    fun log(level: String, msg: String, kv: ReadableMap?, promise: Promise) {
+        try {
+            val kvJson = readableMapToJson(kv)
+            val androidLevel = when (level.uppercase()) {
+                "DEBUG" -> Log.DEBUG
+                "WARN", "WARNING" -> Log.WARN
+                "ERROR" -> Log.ERROR
+                else -> Log.INFO
+            }
+            // Inline JSON: { "level": "...", "msg": "...", "kv": {...} }.
+            // msg is JSON-escaped so quotes/newlines survive logcat verbatim.
+            Log.println(
+                androidLevel,
+                "field_edge",
+                "{\"level\":\"${level.uppercase()}\",\"msg\":${jsonString(msg)},\"kv\":$kvJson}"
+            )
+            promise.resolve(true)
+        } catch (e: Throwable) {
+            promise.reject("LOG_FAILED", e.message, e)
+        }
+    }
+
+    /** JSON-encode a string with proper escaping for inline log lines. */
+    private fun jsonString(s: String): String {
+        val sb = StringBuilder(s.length + 2)
+        sb.append('"')
+        for (c in s) {
+            when (c) {
+                '\\' -> sb.append("\\\\")
+                '"' -> sb.append("\\\"")
+                '\n' -> sb.append("\\n")
+                '\r' -> sb.append("\\r")
+                '\t' -> sb.append("\\t")
+                '\b' -> sb.append("\\b")
+                '\u000c' -> sb.append("\\f")
+                else -> if (c.code < 0x20) sb.append(String.format("\\u%04x", c.code)) else sb.append(c)
+            }
+        }
+        sb.append('"')
+        return sb.toString()
+    }
 }
