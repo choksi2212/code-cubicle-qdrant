@@ -90,3 +90,9 @@ scratch/
 # ─── Screenshots from manual / e2e testing ───────────────────────────────────
 screenshot-*.png
 test*-*.png
+s-*.png
+
+# ─── Generated JS bundle (regenerated on every release build via Metro) ──────
+# Keep this out of git so the repo doesn't ship a 6MB regenerated blob.
+apps/mobile/android/app/src/main/assets/index.android.bundle
+apps/mobile/android/app/src/main/res/drawable-*/
