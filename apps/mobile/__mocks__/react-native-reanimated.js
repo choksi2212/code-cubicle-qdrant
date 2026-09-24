@@ -40,12 +40,22 @@ module.exports = Object.assign({}, Animated, {
   useDerivedValue: (fn) => noopSharedValue(fn()),
   useAnimatedStyle: (fn) => fn(),
   useAnimatedReaction: () => {},
+  useAnimatedScrollHandler: (handlers) => {
+    // Return a no-op handler that the ScrollView's onScroll can call.
+    // Tests don't simulate scroll, so we just stash the handlers.
+    const wrapped = () => {};
+    wrapped.__handlers = handlers;
+    return wrapped;
+  },
+  useAnimatedRef: () => ({ current: null }),
   withTiming: (v) => v,
   withSpring: (v) => v,
   withDelay: (_, v) => v,
   withSequence: (...vs) => vs[vs.length - 1],
   withRepeat: (v) => v,
   cancelAnimation: () => {},
+  interpolate: (v) => v,
+  Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },
   Easing: {
     linear: () => 0,
     ease: () => 0,

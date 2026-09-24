@@ -53,11 +53,17 @@ describe('Icon', () => {
 
   it('renders every icon name documented in the Icon spec', () => {
     const names = [
-      'Camera', 'RefreshCw', 'Settings', 'Sliders', 'ChevronLeft',
-      'ChevronRight', 'Search', 'Map', 'MapPin', 'Image', 'Folder', 'X',
-      'Check', 'AlertCircle', 'Plus', 'Minus', 'Database', 'Lock',
-      'LogOut', 'Trash2', 'Info', 'Wifi', 'WifiOff', 'Clock', 'Calendar',
-      'Hash',
+      'Camera', 'RefreshCw', 'Settings', 'Sliders', 'SlidersHorizontal',
+      'ChevronLeft', 'ChevronRight', 'ChevronDown', 'ChevronUp',
+      'Search', 'Map', 'MapPin', 'Image', 'ImageOff', 'ImagePlus',
+      'Folder', 'X', 'Check', 'AlertCircle', 'Plus', 'Minus',
+      'Database', 'Lock', 'LogOut', 'Trash2', 'Info', 'Wifi', 'WifiOff',
+      'Clock', 'Calendar', 'Hash',
+      'Sparkles', 'Wand2', 'Layers', 'Grid3x3', 'Compass', 'Aperture',
+      'Eye', 'Heart', 'Star', 'Bookmark', 'Share', 'Download', 'Upload',
+      'Filter', 'Loader', 'CircleCheck', 'TriangleAlert', 'CircleX',
+      'ArrowLeft', 'ArrowRight', 'Ellipsis', 'Smartphone', 'Shield',
+      'Loader2', 'CheckCircle2', 'AlertTriangle', 'XCircle', 'MoreHorizontal',
     ];
     for (const name of names) {
       const tree = renderer.create(<Icon name={name as any} />).toJSON();

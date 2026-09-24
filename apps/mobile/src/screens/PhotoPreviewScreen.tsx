@@ -1,13 +1,9 @@
 /**
  * PhotoPreviewScreen — full-size photo view + metadata for a single point.
  *
- * Used by AlbumScreen (tap a thumbnail) and MapScreen (tap a marker).
- * Reads the point from the local shard via fieldEdge.retrieve, then
- * reads the JPEG bytes off disk via RNFS and renders it with <Image>.
- *
- * Metadata shown: photo_id, captured_at, lat/lng, project_id, device_id,
- * embedding_status, vector_checksum (truncated). Future enrichment
- * fields will surface here once they get populated.
+ * Reached from Album, Map, Search, and Conflict rows. Reads the point
+ * from the local shard via fieldEdge.retrieve, then reads the JPEG bytes
+ * off disk via RNFS and renders it with <Image>.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -16,7 +12,6 @@ import {
   Alert,
   Image,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,10 +20,16 @@ import {
 import RNFS from 'react-native-fs';
 import { fieldEdge, Payload } from '../native/fieldEdge';
 import { photoAbsPath } from '../config';
+import { Icon } from '../components/Icon';
+import { PressableScale } from '../components/PressableScale';
+import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
+import { colors, radius, spacing, typography } from '../theme/tokens';
 
 interface Props {
   photoId: string;
   onClose: () => void;
+  onDelete?: (photoId: string) => void;
 }
 
 interface Loaded {
@@ -37,7 +38,7 @@ interface Loaded {
   exists: boolean;
 }
 
-export function PhotoPreviewScreen({ photoId, onClose }: Props) {
+export function PhotoPreviewScreen({ photoId, onClose, onDelete }: Props) {
   const [state, setState] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,147 +70,270 @@ export function PhotoPreviewScreen({ photoId, onClose }: Props) {
     };
   }, [photoId]);
 
-  const openErrorLog = () => {
-    if (state?.exists) return;
+  const handleDelete = () => {
     Alert.alert(
-      'JPEG not on disk',
-      'The point exists in the shard but the JPEG was not persisted to the sandbox. ' +
-        'This can happen after a fresh install with no re-sync. Try Sync now.',
+      'Delete this photo?',
+      'It will be removed from the local shard. The next sync will not re-upload it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            onDelete?.(photoId);
+            onClose();
+          },
+        },
+      ],
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
-        <Pressable onPress={onClose} hitSlop={12}>
-          <Text style={styles.back}>← Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Photo</Text>
-        <View style={{ width: 60 }} />
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Header onClose={onClose} />
+        <View style={styles.center}>
+          <EmptyState icon="AlertTriangle" title="Could not load photo" subtitle={error} />
+        </View>
       </View>
+    );
+  }
 
-      {error ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>{error}</Text>
+  if (!state) {
+    return (
+      <View style={styles.container}>
+        <Header onClose={onClose} />
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.accent} />
         </View>
-      ) : !state ? (
-        <View style={styles.empty}>
-          <ActivityIndicator color="#00BFA6" />
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scroll}>
-          {state.exists ? (
-            <Image
-              source={{ uri: 'file://' + state.absPath }}
-              style={styles.preview}
-              resizeMode="contain"
-            />
-          ) : (
-            <Pressable style={styles.missing} onPress={openErrorLog}>
-              <Text style={styles.missingTitle}>JPEG missing</Text>
-              <Text style={styles.missingHint}>Tap for details</Text>
-            </Pressable>
-          )}
+      </View>
+    );
+  }
 
-          <View style={styles.metaCard}>
-            <Meta label="Photo ID" value={(state.payload.photo_id ?? photoId).slice(0, 8) + '…'} />
-            <Meta label="Captured" value={new Date(state.payload.captured_at).toLocaleString()} />
-            <Meta
-              label="GPS"
-              value={
-                state.payload.gps_status === 'ok' && state.payload.lat != null && state.payload.lng != null
-                  ? `${state.payload.lat.toFixed(5)}, ${state.payload.lng.toFixed(5)}`
-                  : state.payload.gps_status
-              }
-            />
-            <Meta label="Project" value={state.payload.project_id} />
-            <Meta label="Device" value={state.payload.device_id.slice(0, 8) + '…'} />
-            <Meta
-              label="Embedding"
-              value={state.payload.embedding_status}
-              accent={
-                state.payload.embedding_status === 'ok'
-                  ? '#00BFA6'
-                  : state.payload.embedding_status === 'failed'
-                  ? '#EF4444'
-                  : '#F5A524'
-              }
-            />
-            {state.payload.synced_at ? (
-              <Meta
-                label="Synced"
-                value={new Date(state.payload.synced_at).toLocaleString()}
-              />
-            ) : null}
-            <Meta
-              label="Checksum"
-              value={state.payload.vector_checksum.slice(0, 16) + '…'}
-            />
-          </View>
-        </ScrollView>
-      )}
-    </SafeAreaView>
-  );
-}
+  const { payload, absPath, exists } = state;
+  const gpsText =
+    payload.gps_status === 'ok' && payload.lat != null && payload.lng != null
+      ? `${payload.lat.toFixed(5)}, ${payload.lng.toFixed(5)}`
+      : payload.gps_status;
 
-function Meta({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <View style={styles.metaRow}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={[styles.metaValue, accent ? { color: accent } : null]}>{value}</Text>
+    <View style={styles.container}>
+      <Header onClose={onClose} />
+
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {exists ? (
+          <Image source={{ uri: 'file://' + absPath }} style={styles.preview} resizeMode="contain" />
+        ) : (
+          <Pressable
+            style={styles.missing}
+            onPress={() =>
+              Alert.alert(
+                'JPEG not on disk',
+                'The point exists in the shard but the JPEG file is missing. ' +
+                  'Try Sync to re-download.',
+              )
+            }
+          >
+            <Icon name="ImageOff" size="xl" color={colors.danger} strokeWidth={1.5} />
+            <Text style={styles.missingTitle}>Photo not on disk</Text>
+            <Text style={styles.missingHint}>Tap for details</Text>
+          </Pressable>
+        )}
+
+        <View style={styles.toolbar}>
+          <ToolButton icon="Bookmark" label="Save" disabled />
+          <ToolButton icon="Share" label="Share" disabled />
+          {onDelete ? <ToolButton icon="Trash2" label="Delete" danger onPress={handleDelete} /> : null}
+          <ToolButton icon="MoreHorizontal" label="More" disabled />
+        </View>
+
+        <Card style={styles.metaCard}>
+          <MetaRow icon="Hash" label="Photo ID" value={(payload.photo_id ?? photoId).slice(0, 8) + '…'} mono />
+          <MetaRow
+            icon="Calendar"
+            label="Captured"
+            value={new Date(payload.captured_at).toLocaleString()}
+          />
+          <MetaRow icon="MapPin" label="GPS" value={gpsText} />
+          <MetaRow icon="Folder" label="Project" value={payload.project_id} />
+          <MetaRow icon="Smartphone" label="Device" value={payload.device_id.slice(0, 8) + '…'} mono />
+          <MetaRow
+            icon="Sparkles"
+            label="Embedding"
+            value={payload.embedding_status}
+            accent={
+              payload.embedding_status === 'ok'
+                ? colors.success
+                : payload.embedding_status === 'failed'
+                ? colors.danger
+                : colors.warning
+            }
+          />
+          {payload.synced_at ? (
+            <MetaRow
+              icon="Clock"
+              label="Synced"
+              value={new Date(payload.synced_at).toLocaleString()}
+            />
+          ) : null}
+          <MetaRow
+            icon="Shield"
+            label="Checksum"
+            value={payload.vector_checksum.slice(0, 16) + '…'}
+            mono
+          />
+        </Card>
+      </ScrollView>
     </View>
   );
 }
 
+function Header({ onClose }: { onClose: () => void }) {
+  return (
+    <View style={styles.header}>
+      <PressableScale onPress={onClose} hitSlop={12}>
+        <View style={styles.backRow}>
+          <Icon name="ChevronLeft" size="sm" color={colors.textSecondary} />
+          <Text style={styles.backLabel}>Back</Text>
+        </View>
+      </PressableScale>
+      <Text style={styles.title}>Photo</Text>
+    </View>
+  );
+}
+
+function MetaRow({
+  icon,
+  label,
+  value,
+  mono,
+  accent,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  mono?: boolean;
+  accent?: string;
+}) {
+  return (
+    <View style={styles.metaRow}>
+      <View style={styles.metaIconWrap}>
+        <Icon name={icon} size="sm" color={colors.textTertiary} />
+      </View>
+      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={[styles.metaValue, mono && { fontFamily: 'monospace' }, accent ? { color: accent } : null]}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ToolButton({
+  icon,
+  label,
+  disabled,
+  danger,
+  onPress,
+}: {
+  icon: any;
+  label: string;
+  disabled?: boolean;
+  danger?: boolean;
+  onPress?: () => void;
+}) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.toolBtn,
+        pressed && { backgroundColor: colors.surfaceElevated },
+      ]}
+    >
+      <Icon
+        name={icon}
+        size="md"
+        color={disabled ? colors.textDisabled : danger ? colors.danger : colors.textSecondary}
+      />
+      <Text
+        style={[
+          styles.toolLabel,
+          disabled && { color: colors.textDisabled },
+          danger && { color: colors.danger },
+        ]}
+      >
+        {label}
+      </Text>
+    </PressableScale>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0E1116' },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    paddingTop: 8,
-  },
-  back: { color: '#00BFA6', fontSize: 14, fontWeight: '600' },
-  title: { color: '#E6EAF0', fontSize: 22, fontWeight: 'bold' },
-  scroll: { padding: 16, alignItems: 'stretch' },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: { paddingHorizontal: spacing[5], paddingTop: spacing[4], gap: spacing[2] },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
+  backLabel: { ...typography.bodyStrong, color: colors.textSecondary },
+  title: { ...typography.display, color: colors.textPrimary, marginTop: spacing[1] },
+
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing[6] },
+
+  scroll: { padding: spacing[5], paddingBottom: spacing[8] },
   preview: {
     width: '100%',
     aspectRatio: 1,
     backgroundColor: '#000',
-    borderRadius: 12,
+    borderRadius: radius.lg,
   },
   missing: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: '#1A1F26',
-    borderRadius: 12,
+    backgroundColor: colors.dangerSubtle,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.danger,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing[2],
+  },
+  missingTitle: { ...typography.bodyStrong, color: colors.danger },
+  missingHint: { ...typography.small, color: colors.textTertiary },
+
+  toolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.border,
+    paddingVertical: spacing[3],
+    marginTop: spacing[4],
   },
-  missingTitle: { color: '#EF4444', fontSize: 16, fontWeight: '700' },
-  missingHint: { color: '#5B6573', fontSize: 12, marginTop: 4 },
-  metaCard: {
-    marginTop: 16,
-    backgroundColor: '#1A1F26',
-    borderRadius: 12,
-    padding: 16,
+  toolBtn: {
+    alignItems: 'center',
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.md,
+    gap: spacing[1],
   },
+  toolLabel: { ...typography.caption, color: colors.textSecondary },
+
+  metaCard: { marginTop: spacing[4] },
   metaRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: spacing[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    gap: spacing[3],
   },
-  metaLabel: { color: '#8B95A5', fontSize: 13 },
-  metaValue: { color: '#E6EAF0', fontSize: 13, fontWeight: '600' },
-  empty: {
-    flex: 1,
+  metaIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
   },
-  emptyText: { color: '#5B6573', fontSize: 16, fontWeight: '600' },
+  metaLabel: { ...typography.small, color: colors.textTertiary, width: 80 },
+  metaValue: { ...typography.bodyStrong, color: colors.textPrimary, flex: 1, textAlign: 'right' },
 });
