@@ -20,6 +20,7 @@ interface NativeBridge {
   walClear(walPath: string): Promise<{ status: 'ok' | 'err'; value?: { cleared: boolean; removed_bytes: number }; code?: string; message?: string }>;
   version(): Promise<{ status: string; value?: { crate: string; version: string; rust_version: string; features: Record<string, boolean> } }>;
   checksum(vector: number[]): Promise<{ status: string; value?: { checksum: string } }>;
+  log(level: string, msg: string, kv: Record<string, unknown>): Promise<boolean>;
 }
 
 const LINKING_ERROR =
@@ -60,6 +61,55 @@ export interface Payload {
   synced_at: string | null;
   local_updated_at: string;
   vector_checksum: string;
+  // v2-only fields — see docs/05-SCHEMA-VERSIONS.md
+  deletion_marker: boolean;
+  project_owner: string | null;
+  tags_v2: string[];
+}
+
+/**
+ * Detect a payload's schema version. Treats a missing `schema_version` as
+ * legacy v1 (the original wire format pre-dates the discriminator).
+ */
+export function detectSchemaVersion(input: any): 1 | 2 {
+  const raw = input?.schema_version;
+  if (raw === 2 || raw === '2') return 2;
+  return 1;
+}
+
+/**
+ * Upgrade any payload (v1 or v2) to the current schema (v2). v1 inputs get
+ * the migration defaults:
+ *
+ * - `deletion_marker` → false
+ * - `project_owner` → null
+ * - `tags_v2` → copy of `enrichment_tags`
+ *
+ * v2 inputs pass through (with any missing v2 fields defaulted). Mutates
+ * and returns the input object for in-place upgrades.
+ */
+export function migratePayload(input: any): Payload {
+  if (input == null || typeof input !== 'object') {
+    throw new Error('migratePayload: input must be an object');
+  }
+  const version = detectSchemaVersion(input);
+  if (version === 2) {
+    // Already current — make sure all v2 fields are present so the result
+    // satisfies the strict Payload shape.
+    return {
+      deletion_marker: !!input.deletion_marker,
+      project_owner: input.project_owner ?? null,
+      tags_v2: Array.isArray(input.tags_v2) ? input.tags_v2 : [],
+      ...input,
+    } as Payload;
+  }
+
+  // v1 → v2: synthesize defaults for the new fields.
+  input.schema_version = 2;
+  input.deletion_marker = false;
+  input.project_owner = null;
+  input.tags_v2 = Array.isArray(input.enrichment_tags) ? [...input.enrichment_tags] : [];
+  return input as Payload;
 }
 
 export interface QueryRequest {
@@ -181,6 +231,24 @@ class FieldEdgeClient {
 
   async checksum(vector: number[]): Promise<{ status: string; value?: { checksum: string } }> {
     return native.checksum(vector);
+  }
+
+  /**
+   * Forward one structured log line through the bridge. The Kotlin side
+   * (`FieldEdgeRustModule.kt::log`) routes it into Android logcat under
+   * tag "field_edge" so operators can read it with
+   * `adb logcat | grep field_edge`.
+   *
+   * Best-effort: if the bridge isn't available (e.g. running under Jest
+   * with no native module shim) we silently swallow the rejection —
+   * logging must never crash the app or break a test.
+   */
+  async log(level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR', msg: string, kv: Record<string, unknown> = {}): Promise<void> {
+    try {
+      await native.log(level, msg, kv);
+    } catch {
+      // see doc above
+    }
   }
 }
 
