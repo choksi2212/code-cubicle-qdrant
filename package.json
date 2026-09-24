@@ -13,6 +13,8 @@
     "lint": "cargo clippy --manifest-path packages/field-edge-rust/Cargo.toml && pnpm -r lint",
     "sync-api:dev": "cd apps/sync-api && uvicorn app.main:app --reload --port 8000",
     "sync-api:install": "pip install -e apps/sync-api",
+    "sync-api:generate-openapi": "bash apps/sync-api/scripts/generate-openapi.sh",
+    "sync-api:test": "cd apps/sync-api && pytest tests/",
     "demo:seed": "tsx apps/mobile/scripts/seed.ts",
     "format": "cargo fmt --manifest-path packages/field-edge-rust/Cargo.toml && pnpm -r format"
   },
