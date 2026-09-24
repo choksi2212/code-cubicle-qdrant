@@ -2,9 +2,11 @@ openapi: 3.1.0
 info:
   title: FieldEdge Sync API
   version: 0.1.0
-  description: "Orchestrator between FieldEdge mobile devices and the central Qdrant\ncluster. All `/sync/*` endpoints (except\
-    \ heartbeat, which is unauthed)\nrequire a Bearer token of the form `Bearer dev_<device_id>` \xE2\u20AC\u201D any\nnon-empty\
-    \ token >= 8 characters is accepted by the v1 auth shim.\n"
+  description: "Orchestrator between FieldEdge mobile devices and the central Qdrant
+cluster. Authentication uses HS256 JWTs issued by `/auth/login` and
+refreshed via `/auth/refresh`. All `/sync/*` endpoints require an
+`Authorization: Bearer <access_token>` header carrying a token whose `type` claim is `access` (15-minute TTL). See docs/08-AUTH.md for the planned OIDC swap.
+"
   contact:
     name: FieldEdge Hackathon Team
     url: https://github.com/choksi2212/field-edge
@@ -16,13 +18,99 @@ servers:
 - url: https://field-edge-sync-api.onrender.com
   description: Production (Render)
 tags:
+- name: auth
+  description: JWT login + refresh + me
 - name: sync
   description: Batch upload, pull, and WAL replay
+- name: conflicts
+  description: Per-photo conflict audit (which payload won, which fields changed)
 - name: heartbeat
   description: Server liveness with Qdrant reachability
 - name: health
   description: Kubernetes-style probes
 paths:
+  /auth/login:
+    post:
+      tags:
+      - auth
+      summary: Exchange device credentials for a JWT pair
+      description: 'Mints a short-lived access token (15-minute TTL) and a
+        long-lived refresh token (7-day TTL). Both are HS256-signed JWTs
+        whose `sub` claim is the supplied `device_id`. Today the only
+        requirement is a non-empty `device_id` and an 8+-character
+        `device_token` -- see docs/08-AUTH.md for the planned OIDC swap.
+
+        '
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token pair minted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Missing or short device_token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /auth/refresh:
+    post:
+      tags:
+      - auth
+      summary: Trade a refresh token for a new pair
+      description: 'Rotates the refresh token (new `jti`) and issues a fresh
+        access token. v0 policy: the OLD refresh token keeps working
+        until its natural expiry (no server-side jti revocation list
+        yet -- TODO in OIDC pass).
+
+        '
+      operationId: refresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New token pair.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/me:
+    get:
+      tags:
+      - auth
+      summary: Echo the authenticated device and access-token expiry
+      description: 'A lightweight bearer probe -- clients can hit this on app
+        foreground to decide whether to silently refresh.
+
+        '
+      operationId: me
+      security:
+      - DeviceBearer: []
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /sync/upload:
     post:
       tags:
@@ -169,6 +257,43 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /sync/conflicts/{photo_id}:
+    get:
+      tags:
+      - conflicts
+      summary: Audit record for a single photo's last conflict resolution
+      description: "Returns the local + remote payloads as they stood at the moment\nof the last conflict resolution, the winner, and which top-level\nfields changed. Used by the mobile ConflictDetailScreen to show\n\"your photo was replaced by a newer version from your colleague's\ntablet\" and let the user see both copies side-by-side. The `local`\npayload is read from a `_local_snapshot` field that the upload router\nwrites on every upload. Returns 404 if the photo_id is unknown.\n"
+      operationId: getConflict
+      security:
+      - DeviceBearer: []
+      parameters:
+      - name: photo_id
+        in: path
+        required: true
+        schema:
+          type: string
+          description: UUID of the photo to look up.
+      responses:
+        '200':
+          description: Conflict audit record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: photo_id not found in the central cluster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Qdrant unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /healthz:
     get:
       tags:
@@ -213,10 +338,18 @@ components:
     DeviceBearer:
       type: http
       scheme: bearer
-      bearerFormat: dev_<device_id>
-      description: 'v1 trust-everything shim. Production will swap this for a signed
+      bearerFormat: JWT
+      description: 'HS256-signed JWT issued by /auth/login. The token's `sub`
 
-        JWT once the auth endpoint ships.
+        claim is the device_id and the `type` claim is `access`. Tokens
+
+        expire after JWT_ACCESS_TTL_SECONDS (default 900s = 15 min);
+
+        refresh via /auth/refresh. The v0 login endpoint accepts any
+
+        8+ char device_token -- OIDC swap replaces that with a real
+
+        auth-code exchange.
 
         '
   responses:
@@ -519,6 +652,53 @@ components:
             $ref: '#/components/schemas/PointResult'
         next_cursor:
           type: string
+    ConflictDetailResponse:
+      type: object
+      description: "Audit record for a single photo's last conflict resolution.
+        Both `local` and `remote` are full `PointPayload` shapes (validated
+        client-side via Pydantic before serialization).
+      "
+      additionalProperties: false
+      required:
+      - photo_id
+      - remote
+      - winner
+      - fields_changed
+      - resolved_at
+      properties:
+        photo_id:
+          type: string
+          description: UUID of the photo.
+        local:
+          description: "Payload as stored on the device's last upload. `null` if
+            the device has never uploaded a snapshot for this photo.
+          "
+          oneOf:
+          - $ref: '#/components/schemas/PointPayload'
+          - type: 'null'
+        remote:
+          $ref: '#/components/schemas/PointPayload'
+        winner:
+          type: string
+          enum:
+          - local
+          - remote
+          - merged
+          description: "Which side won the conflict. `merged` means the two
+            payloads were idempotent (same vector checksum) and no actual
+            conflict occurred.
+          "
+        fields_changed:
+          type: array
+          items:
+            type: string
+          description: "Top-level payload fields where `local` and `remote` differ.
+            Empty when `winner == merged`.
+          "
+        resolved_at:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the resolution was committed.
     HeartbeatResponse:
       type: object
       additionalProperties: false
@@ -608,6 +788,59 @@ components:
           type: string
         type:
           type: string
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - device_id
+      - device_token
+      properties:
+        device_id:
+          type: string
+          description: Per-install device id (ULID).
+        device_token:
+          type: string
+          minLength: 8
+          description: 'Today: any 8+ char shared secret. OIDC pass: an auth-code.'
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: A refresh token issued by /auth/login or a prior /auth/refresh.
+    TokenPair:
+      type: object
+      additionalProperties: false
+      required:
+      - access_token
+      - refresh_token
+      - expires_in
+      properties:
+        access_token:
+          type: string
+          description: HS256 JWT, 15-minute TTL, type=access.
+        refresh_token:
+          type: string
+          description: HS256 JWT, 7-day TTL, type=refresh, has jti.
+        expires_in:
+          type: integer
+          description: Access-token TTL in seconds.
+    MeResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - device_id
+      - exp
+      properties:
+        device_id:
+          type: string
+          description: Sub claim of the access token used for this call.
+        exp:
+          type: integer
+          description: Unix-seconds expiry of the access token used for this call.
     WalEntry:
       type: object
       description: "A single write-ahead-log entry as it lives on the device before\nit's been flushed via `POST /sync/upload`.\

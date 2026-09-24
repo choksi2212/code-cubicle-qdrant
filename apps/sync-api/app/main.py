@@ -10,7 +10,7 @@ from loguru import logger
 from app.config import settings
 from app.logging_config import configure_logging
 from app.middleware import MIDDLEWARE_CLASSES
-from app.routers import heartbeat, health, sync
+from app.routers import auth, conflicts, heartbeat, health, sync
 
 
 @asynccontextmanager
@@ -52,7 +52,9 @@ for _mw in MIDDLEWARE_CLASSES:
     app.add_middleware(_mw)  # type: ignore[arg-type]
 
 # Routers
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(sync.router, prefix="/sync", tags=["sync"])
+app.include_router(conflicts.router, prefix="/sync", tags=["conflicts"])
 app.include_router(heartbeat.router, prefix="/sync", tags=["heartbeat"])
 app.include_router(health.router, tags=["health"])
 
@@ -62,7 +64,16 @@ async def root():
     return {
         "service": "FieldEdge Sync API",
         "version": "0.1.0",
-        "endpoints": ["/sync/upload", "/sync/pull", "/sync/wal/replay", "/sync/heartbeat"],
+        "endpoints": [
+            "/auth/login",
+            "/auth/refresh",
+            "/auth/me",
+            "/sync/upload",
+            "/sync/pull",
+            "/sync/wal/replay",
+            "/sync/conflicts/{photo_id}",
+            "/sync/heartbeat",
+        ],
     }
 
 
