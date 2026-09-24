@@ -171,6 +171,20 @@ class UploadResponse(BaseModel):
     next_cursor: str
 
 
+class IdempotentUploadResponse(UploadResponse):
+    """``POST /sync/upload`` response — always carries ``already_received``.
+
+    ``already_received`` defaults to ``False`` for fresh uploads and is
+    flipped to ``True`` by the router when the request body's
+    canonical SHA-256 matches a batch already accepted in the last 24h.
+    ``results`` is empty on a cached replay; ``next_cursor`` echoes the
+    cursor from the original (cached) response so the device's
+    pull-cursor state machine keeps moving.
+    """
+
+    already_received: bool = False
+
+
 class PullResponse(BaseModel):
     server_time: datetime
     points: list[dict[str, Any]]

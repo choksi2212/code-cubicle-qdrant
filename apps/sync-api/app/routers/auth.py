@@ -1,6 +1,8 @@
-"""/auth/* — login, refresh, and the protected /auth/me echo."""
+"""/auth/* — login, refresh, logout, and the protected /auth/me echo."""
 
 from __future__ import annotations
+
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -12,6 +14,7 @@ from app.auth import (
     decode_token,
     new_session,
     require_auth,
+    revoke_jti,
     validate_login_credentials,
 )
 from app.config import settings
@@ -48,6 +51,25 @@ class RefreshRequest(BaseModel):
     refresh_token: str = Field(..., min_length=1)
 
 
+class LogoutRequest(BaseModel):
+    """Body of `POST /auth/logout`.
+
+    ``refresh_token`` is optional — pass it to also revoke the refresh
+    side of the current session. The access token is always revoked
+    (it's the one that authenticated this call).
+    """
+
+    refresh_token: str | None = Field(default=None, min_length=1)
+
+
+class LogoutResponse(BaseModel):
+    """What `POST /auth/logout` returns."""
+
+    revoked: bool
+    access_revoked: bool
+    refresh_revoked: bool
+
+
 class MeResponse(BaseModel):
     """What `GET /auth/me` returns — a quick way for clients to verify
     the bearer is still alive and discover its remaining lifetime."""
@@ -76,13 +98,14 @@ async def login(req: LoginRequest) -> TokenPair:
 async def refresh(req: RefreshRequest) -> TokenPair:
     """Trade a refresh token for a fresh access+refresh pair.
 
-    v0: rotated refresh tokens stay valid until their natural expiry
-    (no server-side revocation list yet — see docs/08-AUTH.md for the
-    future-work rollout). For now the rotation is a defence-in-depth
-    improvement, not a hard revoke.
+    The OLD refresh token's ``jti`` is immediately written to the
+    Redis-backed revocation list with TTL = its remaining lifetime, so
+    any subsequent decode rejects it with 401 "Token revoked". When
+    Redis is unreachable the revocation silently degrades — the old
+    refresh keeps working until natural expiry (see docs/12-REDIS.md).
     """
     try:
-        payload = decode_token(req.refresh_token, expected_type="refresh")
+        payload = await decode_token(req.refresh_token, expected_type="refresh")
     except HTTPException as exc:
         # Pass through the upstream detail (e.g. "Wrong token type",
         # "Token expired") so clients can debug without a second probe.
@@ -91,14 +114,63 @@ async def refresh(req: RefreshRequest) -> TokenPair:
             detail=exc.detail,
         ) from exc
     device_id = str(payload["sub"])
+
+    # Revoke the old refresh token. TTL = remaining lifetime so the
+    # entry expires at the same moment the token would have anyway —
+    # no background sweep needed.
+    old_jti = str(payload.get("jti") or "")
+    if old_jti:
+        remaining = max(0, int(payload.get("exp", 0)) - int(time.time()))
+        await revoke_jti(old_jti, "refresh", remaining)
+
     new_pair = {
         "access_token": create_access_token(device_id),
-        # Brand new jti — old refresh token keeps working too until the
-        # jti-revocation list lands. See docs/08-AUTH.md.
         "refresh_token": create_refresh_token(device_id),
         "expires_in": settings.jwt_access_ttl_seconds,
     }
     return TokenPair(**new_pair)
+
+
+@router.post("/logout", response_model=LogoutResponse)
+async def logout(
+    req: LogoutRequest | None = None,
+    ctx: AuthContext = Depends(require_auth),
+) -> LogoutResponse:
+    """Revoke the current access token (and the supplied refresh token).
+
+    One-call "log me out everywhere this token is used". Idempotent —
+    revoking an already-revoked ``jti`` is a no-op. Falls back to a
+    no-op when Redis is down so a Redis outage doesn't lock users out.
+    """
+    # Always revoke the access token we just authenticated with.
+    access_revoked = False
+    if ctx.jti:
+        remaining = max(0, int(ctx.exp) - int(time.time()))
+        await revoke_jti(ctx.jti, "access", remaining)
+        access_revoked = True
+
+    refresh_revoked = False
+    if req and req.refresh_token:
+        try:
+            refresh_payload = await decode_token(req.refresh_token, expected_type="refresh")
+        except HTTPException:
+            # Caller supplied an invalid refresh — ignore, but don't 4xx.
+            # They might be logging out from a different device that
+            # already lost its refresh token.
+            refresh_revoked = False
+        else:
+            refresh_jti = str(refresh_payload.get("jti") or "")
+            refresh_exp = int(refresh_payload.get("exp", 0))
+            if refresh_jti:
+                remaining = max(0, refresh_exp - int(time.time()))
+                await revoke_jti(refresh_jti, "refresh", remaining)
+                refresh_revoked = True
+
+    return LogoutResponse(
+        revoked=True,
+        access_revoked=access_revoked,
+        refresh_revoked=refresh_revoked,
+    )
 
 
 @router.get("/me", response_model=MeResponse)

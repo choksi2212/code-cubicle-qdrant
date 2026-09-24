@@ -281,8 +281,12 @@ async def test_sync_upload_matches_schema(client, schema_validator, fake_qdrant)
     resp = await client.post("/sync/upload", json=_sample_upload_request())
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    schema_validator("UploadResponse").validate(body)
+    # Fresh uploads return IdempotentUploadResponse with already_received=False
+    # (Redis-backed idempotency cache may flip the flag to True on a duplicate,
+    # but this is the first hit so it's a fresh response).
+    schema_validator("IdempotentUploadResponse").validate(body)
     assert body["batch_id"] == "01HF8Z9X3N4Y7K5V2C1A0B6D7E"
+    assert body["already_received"] is False
     assert isinstance(body["results"], list) and len(body["results"]) == 1
     result = body["results"][0]
     # Result itself validates against PointResult too.

@@ -14,13 +14,13 @@ enterprise SSO is wired up — see ``docs/08-AUTH.md`` for the migration
 plan. The JWT plumbing stays the same.
 
 Replacement policy for refresh tokens:
-    v0 (this commit): rotate-on-refresh — every successful
-    ``/auth/refresh`` issues a brand new refresh token and the old one
-    remains valid until its natural expiry. Reuse of the old token is
-    accepted for now because no server-side revocation store exists.
-    Future work introduces a Redis-backed ``jti`` revocation list and
-    rejects any previously-rotated refresh token; see
-    ``docs/08-AUTH.md`` for the rollout plan.
+    rotate-on-refresh — every successful ``/auth/refresh`` issues a
+    brand new refresh token. The OLD refresh token's ``jti`` is
+    immediately written to a Redis-backed revocation list with TTL =
+    remaining lifetime, so any subsequent decode rejects it with 401
+    "Token revoked". If Redis is down the revocation check degrades
+    gracefully (the old refresh token keeps working until its natural
+    expiry) — see ``docs/12-REDIS.md`` for the failure modes.
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ import jwt
 from fastapi import Depends, Header, HTTPException, status
 
 from app.config import settings
+from app.redis_client import get_redis
 
 
 # ── Token model ────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ class AuthContext:
 
     device_id: str
     exp: int       # unix seconds — exposed so /auth/me can echo it back
-    jti: str | None  # only set for refresh tokens
+    jti: str | None  # access token's jti — used by /auth/logout to revoke it
 
 
 # ── Encoding ───────────────────────────────────────────────────────────────
@@ -74,11 +75,10 @@ def create_access_token(device_id: str) -> str:
 def create_refresh_token(device_id: str) -> str:
     """Mint a long-lived refresh token. Each token gets a unique `jti`.
 
-    v0: ``jti`` is not persisted server-side, so reuse of an old refresh
-    token continues to work until its natural expiry. The future-work
-    rollout persists ``jti`` to Redis with TTL = refresh_ttl and rejects
-    any token whose ``jti`` was previously rotated out — see
-    ``docs/08-AUTH.md``.
+    The ``jti`` is persisted to a Redis-backed revocation list on every
+    successful ``/auth/refresh`` (and on ``/auth/logout``) — see
+    :func:`revoke_jti` and :func:`is_jti_revoked`. Any token whose
+    ``jti`` is on the list is rejected with 401 "Token revoked".
     """
     now = int(time.time())
     payload = {
@@ -91,12 +91,59 @@ def create_refresh_token(device_id: str) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
-def decode_token(token: str, expected_type: str) -> dict:
-    """Verify signature + expiry + type, return the payload dict.
+# ── Revocation helpers ─────────────────────────────────────────────────────
+
+
+def _revoked_key(kind: str, jti: str) -> str:
+    """Return the Redis key we use to mark a ``jti`` as revoked."""
+    return f"revoked:{kind}:{jti}"
+
+
+async def is_jti_revoked(jti: str, kind: str) -> bool:
+    """Return True if the given ``jti`` has been revoked.
+
+    Falls back to ``False`` when Redis is disabled or unreachable — the
+    sync API keeps working, just with stale refresh tokens accepted
+    until natural expiry (the original v0 behaviour).
+    """
+    if not settings.redis_enabled:
+        return False
+    try:
+        r = await get_redis()
+        if r is None:
+            return False
+        return bool(await r.exists(_revoked_key(kind, jti)))
+    except Exception:
+        return False
+
+
+async def revoke_jti(jti: str, kind: str, ttl_seconds: int) -> None:
+    """Record a ``jti`` as revoked for ``ttl_seconds``.
+
+    Uses ``SET ... EX <ttl>`` so the entry auto-expires at the same
+    instant the token would have — no background sweep needed.
+    ``ttl_seconds`` is clamped to >=1 because Redis rejects ``EX 0``.
+    Silently swallows network errors: revocation is best-effort, and
+    the cost of a leaked old token is bounded by its natural expiry.
+    """
+    if not settings.redis_enabled or ttl_seconds <= 0:
+        return
+    try:
+        r = await get_redis()
+        if r is None:
+            return
+        await r.set(_revoked_key(kind, jti), str(int(time.time())), ex=max(1, int(ttl_seconds)))
+    except Exception:
+        return
+
+
+async def decode_token(token: str, expected_type: str) -> dict:
+    """Verify signature + expiry + type + revocation, return the payload dict.
 
     Raises ``HTTPException(401)`` on any failure (bad signature, expired,
-    wrong type, malformed). Callers should treat the returned dict as
-    authoritative — it has already been cryptographically verified.
+    wrong type, malformed, OR revoked). Callers should treat the
+    returned dict as authoritative — it has already been cryptographically
+    verified and checked against the revocation list.
     """
     try:
         payload = jwt.decode(
@@ -120,6 +167,16 @@ def decode_token(token: str, expected_type: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Wrong token type: expected '{expected_type}', got '{payload.get('type')}'",
+        )
+
+    # Revocation check — single Redis EXISTS round-trip per request.
+    # Falls through (i.e. token is accepted) when Redis is disabled or
+    # unreachable so a Redis outage doesn't take down the API.
+    jti = payload.get("jti")
+    if jti and await is_jti_revoked(str(jti), str(payload["type"])):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token revoked",
         )
 
     return payload
@@ -199,11 +256,11 @@ async def require_auth(
     old ``verify_device_token`` shim.
     """
     token = _extract_bearer(authorization)
-    payload = decode_token(token, expected_type="access")
+    payload = await decode_token(token, expected_type="access")
     return AuthContext(
         device_id=str(payload["sub"]),
         exp=int(payload["exp"]),
-        jti=None,
+        jti=str(payload.get("jti")) if payload.get("jti") else None,
     )
 
 

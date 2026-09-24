@@ -69,9 +69,11 @@ paths:
       - auth
       summary: Trade a refresh token for a new pair
       description: 'Rotates the refresh token (new `jti`) and issues a fresh
-        access token. v0 policy: the OLD refresh token keeps working
-        until its natural expiry (no server-side jti revocation list
-        yet — see docs/08-AUTH.md for the rollout plan).
+        access token. The OLD refresh token''s `jti` is written to a
+        Redis-backed revocation list with TTL = remaining lifetime, so
+        any subsequent decode rejects it with 401 "Token revoked".
+        Falls back to no-revocation when Redis is disabled/unreachable
+        — see docs/12-REDIS.md.
 
         '
       operationId: refresh
@@ -88,6 +90,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Revoke the current access token (and optionally its refresh token)
+      description: 'One-call "log me out everywhere this token is used".
+        Always revokes the access token that authenticated the call;
+        if the request body carries a `refresh_token`, that one is
+        also revoked. Both revocations persist to Redis with TTL =
+        remaining token lifetime. Idempotent — calling logout twice is
+        a no-op. Falls back to a no-op when Redis is down.
+
+        '
+      operationId: logout
+      security:
+      - DeviceBearer: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logged out.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /auth/me:
@@ -132,6 +165,12 @@ paths:
 
         wins (`conflict_resolved`, `local_wins`).
 
+        The request body''s canonical SHA-256 is used as a Redis cache
+        key: a repeated POST of the same body within 24h returns the
+        cached response with `already_received=true` instead of
+        re-running the conflict loop. When Redis is unreachable the
+        cache check degrades gracefully — see docs/12-REDIS.md.
+
         '
       operationId: uploadPoints
       security:
@@ -144,11 +183,11 @@ paths:
               $ref: '#/components/schemas/UploadRequest'
       responses:
         '200':
-          description: Batch processed. Check per-point status.
+          description: Batch processed. Check per-point status. When `already_received` is `true`, the body was a duplicate accepted in the last 24h and `results` is empty.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UploadResponse'
+                $ref: '#/components/schemas/IdempotentUploadResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '413':
@@ -314,9 +353,11 @@ paths:
       tags:
       - health
       summary: Readiness probe
-      description: 'Pings the configured Qdrant collection. Returns 200 when the
-
-        cluster is reachable and 503 otherwise.
+      description: 'Pings the configured Qdrant collection and Redis. Returns
+        200 when the Qdrant cluster is reachable and 503 otherwise.
+        `redis` in the payload is `false` when Redis is disabled or
+        unreachable; the probe still returns 200 because Qdrant is the
+        hard dependency (Redis is best-effort). See docs/12-REDIS.md.
 
         '
       operationId: readiness
@@ -608,6 +649,40 @@ components:
         next_cursor:
           type: string
           description: Opaque cursor for the next pull.
+    IdempotentUploadResponse:
+      type: object
+      description: 'Returned by `POST /sync/upload` when the request body
+        matches (by canonical SHA-256) a batch already accepted in the
+        last 24h. `already_received` is always `true`; `results` is
+        empty; `next_cursor` echoes the cursor from the original
+        (cached) response so the device''s pull-cursor state machine
+        keeps moving. Falls back to the original UploadResponse shape
+        when Redis is disabled/unreachable.
+      '
+      additionalProperties: false
+      required:
+      - batch_id
+      - server_time
+      - results
+      - next_cursor
+      - already_received
+      properties:
+        batch_id:
+          type: string
+        server_time:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PointResult'
+        next_cursor:
+          type: string
+          description: Opaque cursor for the next pull. Echoes the cursor from the original (cached) response.
+        already_received:
+          type: boolean
+          description: Always `true`. Marks this response as a duplicate-upload replay.
+          default: true
     PullResponse:
       type: object
       additionalProperties: false
@@ -740,6 +815,7 @@ components:
       additionalProperties: false
       required:
       - status
+      - redis
       properties:
         status:
           type: string
@@ -755,6 +831,13 @@ components:
         qdrant_status:
           type: string
           description: Only present on 200. Raw `str(qdrant_info.status)`.
+        redis:
+          type: boolean
+          description: '`true` when Redis is enabled AND the live ping succeeds.
+            `false` when Redis is disabled in config or unreachable.
+            A `false` here is non-fatal — revocation + idempotency
+            degrade gracefully. See docs/12-REDIS.md.
+          '
         error:
           type: string
           description: Only present on 503.
@@ -842,6 +925,38 @@ components:
         exp:
           type: integer
           description: Unix-seconds expiry of the access token used for this call.
+    LogoutRequest:
+      type: object
+      description: 'Body of `POST /auth/logout`. The body is optional; supply
+        `refresh_token` to also revoke the refresh side of the current
+        session. The access token that authenticated the call is
+        always revoked regardless of body.
+      '
+      additionalProperties: false
+      properties:
+        refresh_token:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          description: Optional refresh token to also revoke. Invalid refresh tokens are silently ignored.
+    LogoutResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - revoked
+      - access_revoked
+      - refresh_revoked
+      properties:
+        revoked:
+          type: boolean
+          description: Always `true` once authentication succeeded.
+        access_revoked:
+          type: boolean
+          description: Whether the access token's `jti` was written to the revocation list.
+        refresh_revoked:
+          type: boolean
+          description: Whether the supplied refresh token's `jti` was written to the revocation list (`false` when no refresh_token was supplied).
     WalEntry:
       type: object
       description: "A single write-ahead-log entry as it lives on the device before\nit's been flushed via `POST /sync/upload`.\

@@ -81,6 +81,10 @@ class Settings(BaseSettings):
 
     # enrichment (forwarded from mobile for enrichment triggers)
 
+    # Redis (JWT revocation list + upload idempotency cache)
+    redis_url: str = "redis://localhost:6379/0"
+    redis_enabled: bool = True  # tests can flip this off to skip Redis entirely
+
     # Logging
     log_level: str = "INFO"
 
@@ -95,6 +99,8 @@ settings = Settings()
 # so we never depend on pydantic-settings cache behaviour. Settings()'s defaults
 # are still the source of truth for type validation, but this guarantees
 # the live value matches what Render injected.
+_BOOL_KEYS = {"redis_enabled"}
+_INT_KEYS = {"jwt_access_ttl_seconds", "jwt_refresh_ttl_seconds", "port"}
 for _key in (
     "qdrant_url",
     "qdrant_api_key",
@@ -103,9 +109,20 @@ for _key in (
     "jwt_access_ttl_seconds",
     "jwt_refresh_ttl_seconds",
     "port",
+    "redis_url",
+    "redis_enabled",
 ):
     _env_val = os.environ.get(_key.upper())
-    if _env_val is not None:
+    if _env_val is None:
+        continue
+    if _key in _BOOL_KEYS:
+        setattr(settings, _key, _env_val.strip().lower() in {"1", "true", "yes", "on"})
+    elif _key in _INT_KEYS:
+        try:
+            setattr(settings, _key, int(_env_val))
+        except ValueError:
+            pass
+    else:
         setattr(settings, _key, _env_val)
 
 # If process env never set jwt_secret and the placeholder is still in place,
