@@ -86,3 +86,7 @@ apps/mobile/android/app/src/main/assets/models/
 .cache/
 .tmp/
 scratch/
+
+# ─── Screenshots from manual / e2e testing ───────────────────────────────────
+screenshot-*.png
+test*-*.png
