@@ -1,16 +1,20 @@
 /**
  * FieldEdge — main app entry.
  *
- * 3-pane layout (top to bottom):
- *   1. Header (Rust version, project, sync status, gear icon → Settings)
- *   2. SearchScreen (text input + result grid)
- *   3. Capture button + Sync button
+ * Screens:
+ *   search          Home with SearchScreen + Capture + Sync buttons
+ *   capture         CaptureScreen full-screen
+ *   report          SyncReportScreen (last sync result)
+ *   onboarding      First-launch welcome
+ *   settings        SettingsScreen (gear icon)
+ *   album           AlbumScreen (date-grouped grid)
+ *   map             MapScreen (GPS pin overlay)
+ *   photo-preview   PhotoPreviewScreen (full-size image + metadata)
+ *   conflict-detail ConflictDetailScreen (per-photo audit trail)
  *
- * Tapping Capture opens CaptureScreen full-screen. After a successful
- * capture, returns here and the search grid updates.
- *
- * On first launch (hasOnboarded=false) the user is dropped into
- * OnboardingScreen instead of the Home screen.
+ * PhotoPreviewScreen is the shared destination for Search/Album/Map taps.
+ * ConflictDetailScreen is reached from the SyncReportScreen's conflict
+ * rows; it carries its own photoId from the conflict entry, not from App.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -39,6 +43,7 @@ import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { AlbumScreen } from './src/screens/AlbumScreen';
 import { MapScreen } from './src/screens/MapScreen';
+import { PhotoPreviewScreen } from './src/screens/PhotoPreviewScreen';
 import { ConflictDetailScreen } from './src/screens/ConflictDetailScreen';
 
 type Screen =
@@ -49,6 +54,7 @@ type Screen =
   | 'settings'
   | 'album'
   | 'map'
+  | 'photo-preview'
   | 'conflict-detail';
 
 export default function App() {
@@ -58,6 +64,7 @@ export default function App() {
   const [pointCount, setPointCount] = useState(0);
   const [version, setVersion] = useState<{ status: string; value?: { crate: string; version: string; rust_version: string; features: Record<string, boolean> } } | null>(null);
   const [syncReport, setSyncReport] = useState<SyncMetrics | null>(null);
+  const [currentPhotoId, setCurrentPhotoId] = useState<string>('');
   const { status, lastReport, triggerSync, setPendingCount } = useSyncStore();
   const resetSettings = useSettingsStore((s) => s.reset);
 
@@ -67,12 +74,9 @@ export default function App() {
 
   const initialize = async () => {
     try {
-      // Initialize device identity + Bearer token before anything hits the API.
       const token = await getDeviceToken();
       apiClient.setToken(token);
 
-      // FR-013 — warm up the CLIP ONNX sessions so the first capture is fast.
-      // Fire-and-forget; failure is non-fatal (degraded mode kicks in).
       warmUpClip().catch(() => {});
 
       const ver = await fieldEdge.version();
@@ -96,9 +100,6 @@ export default function App() {
     }
   };
 
-  // Decide the initial screen after hydration. zustand's persist is async
-  // — wait until both init() finishes and the store has rehydrated from
-  // AsyncStorage so we don't flash Onboarding on a returning user.
   useEffect(() => {
     if (!bootReady) return;
     let cancelled = false;
@@ -106,7 +107,6 @@ export default function App() {
       if (cancelled) return;
       const hydrated = useSettingsStore.persist.hasHydrated();
       if (!hydrated) {
-        // Wait one tick for hydration to finish.
         setTimeout(check, 50);
         return;
       }
@@ -119,6 +119,11 @@ export default function App() {
       cancelled = true;
     };
   }, [bootReady, screen]);
+
+  const openPhoto = (photoId: string) => {
+    setCurrentPhotoId(photoId);
+    setScreen('photo-preview');
+  };
 
   const onCaptured = async (photoId: string) => {
     setScreen('search');
@@ -134,11 +139,9 @@ export default function App() {
   const runSyncFlow = async () => {
     try {
       const report = await triggerSync();
-      // Always show the report — even on errors — so the user sees what happened.
       setSyncReport(report ?? lastReport);
       setScreen('report');
     } catch (err) {
-      // Store-level error (only if runSync itself throws; it now catches internally).
       Alert.alert('Sync failed', String(err));
     }
   };
@@ -177,8 +180,6 @@ export default function App() {
         <SettingsScreen
           onClose={() => setScreen('search')}
           onLogout={() => {
-            // Clear token + onboarding flag; AsyncStorage wipe is fire-and-
-            // forget so we don't block the nav transition.
             apiClient.setToken('');
             AsyncStorage.multiRemove([
               '@fieldedge/device_id',
@@ -196,26 +197,33 @@ export default function App() {
     return (
       <AlbumScreen
         onBack={() => setScreen('search')}
-        onPhotoPress={(photoId) => console.log('open', photoId)}
+        onPhotoPress={openPhoto}
       />
     );
   }
 
   if (screen === 'map') {
     return (
-      <MapScreen onBack={() => setScreen('search')} />
+      <MapScreen
+        onBack={() => setScreen('search')}
+        onOpenPhoto={openPhoto}
+      />
+    );
+  }
+
+  if (screen === 'photo-preview') {
+    return (
+      <PhotoPreviewScreen
+        photoId={currentPhotoId}
+        onClose={() => setScreen('search')}
+      />
     );
   }
 
   if (screen === 'conflict-detail') {
-    // Mount point owned by the Conflict UX agent. The current screen
-    // requires a photoId prop; for v1 nav from the home screen we
-    // pass an empty placeholder (the Conflict UX agent's own nav
-    // surfaces the real photoId). The onClose callback routes back to
-    // the search/home view.
     return (
       <ConflictDetailScreen
-        photoId=""
+        photoId={currentPhotoId}
         onClose={() => setScreen('search')}
       />
     );
@@ -258,7 +266,7 @@ export default function App() {
         </View>
 
         <SearchScreen
-          onPhotoPress={(hit) => console.log('open', hit.id)}
+          onPhotoPress={openPhoto}
           activeTab="search"
           onTabChange={(tab) => setScreen(tab)}
         />

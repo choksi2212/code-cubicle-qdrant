@@ -10,9 +10,9 @@ every documented behaviour of the auth flow:
   4. GET  /sync/upload       → 200 with bearer / 401 without / 401 with expired
   5. POST /auth/refresh      → 200 + new tokens; reusing the OLD refresh
                                 token is still accepted in v0 (rotate-on-
-                                refresh, no revocation list). OIDC pass
-                                adds the revocation list — TODO in
-                                `app/auth.py::decode_token`.
+                                refresh, no revocation list). The future
+                                OIDC pass adds the revocation list — see
+                                docs/08-AUTH.md.
 """
 
 from __future__ import annotations
@@ -299,7 +299,7 @@ async def test_sync_upload_with_garbage_token_returns_401(client):
 async def test_refresh_returns_new_pair_and_accepts_old_token(client):
     """v0 rotation policy: refresh issues a new pair AND the old refresh
     token keeps working until its natural expiry (no server-side jti
-    revocation list yet — TODO in app/auth.py).
+    revocation list yet — see docs/08-AUTH.md for the rollout plan).
 
     The contract we DO guarantee: the new pair differs from the old one
     (different access + different refresh) and the new access token

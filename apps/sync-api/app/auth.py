@@ -8,19 +8,19 @@ Tokens:
   ``{sub: device_id, iat, exp, type: "refresh", jti: <uuid>}``.
 
 For now the ``/auth/login`` endpoint accepts any non-empty ``device_id``
-plus an 8+ char ``device_token`` and mints a real JWT. We swap that
-``device_token`` validation for an OIDC code-exchange once enterprise SSO
-is wired up — the JWT plumbing stays the same.
+plus an 8+ char ``device_token`` and mints a real JWT. Future work
+replaces ``device_token`` validation with an OIDC code-exchange once
+enterprise SSO is wired up — see ``docs/08-AUTH.md`` for the migration
+plan. The JWT plumbing stays the same.
 
 Replacement policy for refresh tokens:
     v0 (this commit): rotate-on-refresh — every successful
     ``/auth/refresh`` issues a brand new refresh token and the old one
-    remains valid until its natural expiry. We accept reuse of the old
-    token for now because we don't have a server-side revocation store.
-    v1 (TODO, see comment in decode_token): introduce a Redis-backed
-    ``jti`` revocation list and reject any previously-rotated refresh
-    token. OIDC swap will land in the same pass — refresh tokens get
-    replaced by OIDC's own refresh-token semantics.
+    remains valid until its natural expiry. Reuse of the old token is
+    accepted for now because no server-side revocation store exists.
+    Future work introduces a Redis-backed ``jti`` revocation list and
+    rejects any previously-rotated refresh token; see
+    ``docs/08-AUTH.md`` for the rollout plan.
 """
 
 from __future__ import annotations
@@ -74,10 +74,11 @@ def create_access_token(device_id: str) -> str:
 def create_refresh_token(device_id: str) -> str:
     """Mint a long-lived refresh token. Each token gets a unique `jti`.
 
-    v0: we don't persist `jti` server-side, so reuse of an old refresh
-    token will keep working until its natural expiry. TODO (OIDC pass):
-    persist `jti` to Redis with TTL = refresh_ttl and reject any token
-    whose `jti` was previously rotated out.
+    v0: ``jti`` is not persisted server-side, so reuse of an old refresh
+    token continues to work until its natural expiry. The future-work
+    rollout persists ``jti`` to Redis with TTL = refresh_ttl and rejects
+    any token whose ``jti`` was previously rotated out — see
+    ``docs/08-AUTH.md``.
     """
     now = int(time.time())
     payload = {
@@ -130,10 +131,11 @@ def decode_token(token: str, expected_type: str) -> dict:
 def validate_login_credentials(device_id: str, device_token: str) -> None:
     """For now: any non-empty device_id + 8+ char device_token.
 
-    v1 (TODO OIDC): swap this body for an OIDC code-exchange that calls
+    Future work swaps this body for an OIDC code-exchange that calls
     the enterprise IdP's ``/token`` endpoint and verifies the ID token's
     signature + ``sub`` claim. The ``device_id`` we mint can come from
-    the ID token's ``sub`` or an internal mapping.
+    the ID token's ``sub`` or an internal mapping. See
+    ``docs/08-AUTH.md`` for the rollout plan.
     """
     if not device_id or not isinstance(device_id, str):
         raise HTTPException(

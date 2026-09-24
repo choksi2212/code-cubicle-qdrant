@@ -77,8 +77,9 @@ async def refresh(req: RefreshRequest) -> TokenPair:
     """Trade a refresh token for a fresh access+refresh pair.
 
     v0: rotated refresh tokens stay valid until their natural expiry
-    (no server-side revocation list yet — TODO in OIDC pass). For now
-    the rotation is a defence-in-depth improvement, not a hard revoke.
+    (no server-side revocation list yet — see docs/08-AUTH.md for the
+    future-work rollout). For now the rotation is a defence-in-depth
+    improvement, not a hard revoke.
     """
     try:
         payload = decode_token(req.refresh_token, expected_type="refresh")
@@ -92,8 +93,8 @@ async def refresh(req: RefreshRequest) -> TokenPair:
     device_id = str(payload["sub"])
     new_pair = {
         "access_token": create_access_token(device_id),
-        # Brand new jti — old refresh token will keep working too until
-        # we land a jti-revocation list. See decode_token's TODO.
+        # Brand new jti — old refresh token keeps working too until the
+        # jti-revocation list lands. See docs/08-AUTH.md.
         "refresh_token": create_refresh_token(device_id),
         "expires_in": settings.jwt_access_ttl_seconds,
     }

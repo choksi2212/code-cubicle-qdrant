@@ -10,14 +10,12 @@
  * offline, no react-native-maps dep). The v2 plan is to add an opt-in
  * map tile source behind a settings flag.
  *
- * TODO: marker tap should navigate to a PhotoPreviewScreen that shows
- * the full-size image + metadata. v1 just fires an Alert with the coords
- * + captured_at since the preview screen is future work.
+ * Marker tap navigates to PhotoPreviewScreen with the photo_id; the
+ * preview reads the JPEG from disk + the full payload from the shard.
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -25,14 +23,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import { fieldEdge, PointInput } from '../native/fieldEdge';
+import { fieldEdge } from '../native/fieldEdge';
 import { MapView, MapMarker } from '../components/MapView';
 
 interface Props {
   onBack: () => void;
+  onOpenPhoto: (photoId: string) => void;
 }
 
-export function MapScreen({ onBack }: Props) {
+export function MapScreen({ onBack, onOpenPhoto }: Props) {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +41,6 @@ export function MapScreen({ onBack }: Props) {
     setError(null);
     try {
       const points = await fieldEdge.retrieve([]);
-      // Filter to geo-tagged captures only. gps_status="unavailable" or
-      // "denied" points still live in the shard — AlbumScreen shows them —
-      // but they have no meaningful location, so we drop them here.
       const geoTagged: MapMarker[] = [];
       for (const p of points) {
         const payload = p.payload;
@@ -70,20 +66,12 @@ export function MapScreen({ onBack }: Props) {
     load();
   }, [load]);
 
-  const handleMarkerPress = useCallback((photoId: string) => {
-    const m = markers.find((x) => x.photoId === photoId);
-    if (!m) return;
-    // TODO: navigate to PhotoPreviewScreen once that lands. For now we
-    // surface enough metadata that the user can confirm the marker is the
-    // photo they wanted.
-    Alert.alert(
-      'Photo',
-      `id: ${photoId.slice(0, 8)}…\n` +
-        `lat: ${m.lat.toFixed(5)}\n` +
-        `lng: ${m.lng.toFixed(5)}\n` +
-        `captured: ${new Date(m.capturedAt).toLocaleString()}`,
-    );
-  }, [markers]);
+  const handleMarkerPress = useCallback(
+    (photoId: string) => {
+      onOpenPhoto(photoId);
+    },
+    [onOpenPhoto],
+  );
 
   const hasGps = markers.length > 0;
 
@@ -121,7 +109,7 @@ export function MapScreen({ onBack }: Props) {
             height={320}
           />
           <Text style={styles.help}>
-            Tap a marker for details. Larger dots are fresher captures
+            Tap a marker to open the photo. Larger dots are fresher captures
             (last 30 days).
           </Text>
         </ScrollView>

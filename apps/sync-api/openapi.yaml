@@ -71,7 +71,7 @@ paths:
       description: 'Rotates the refresh token (new `jti`) and issues a fresh
         access token. v0 policy: the OLD refresh token keeps working
         until its natural expiry (no server-side jti revocation list
-        yet -- TODO in OIDC pass).
+        yet — see docs/08-AUTH.md for the rollout plan).
 
         '
       operationId: refresh

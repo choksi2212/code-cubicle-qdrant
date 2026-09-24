@@ -273,13 +273,13 @@ exports[`MapScreen matches the locked layout snapshot (populated with markers) 1
               "position": "absolute",
             },
             {
-              "backgroundColor": "#5B6573",
-              "borderRadius": 5,
-              "height": 10,
-              "left": 303,
-              "opacity": 0.6,
-              "top": 7,
-              "width": 10,
+              "backgroundColor": "#00BFA6",
+              "borderRadius": 8,
+              "height": 16,
+              "left": 300,
+              "opacity": 1,
+              "top": 4,
+              "width": 16,
             },
           ]
         }
@@ -296,7 +296,7 @@ exports[`MapScreen matches the locked layout snapshot (populated with markers) 1
         }
       }
     >
-      Tap a marker for details. Larger dots are fresher captures (last 30 days).
+      Tap a marker to open the photo. Larger dots are fresher captures (last 30 days).
     </Text>
   </ScrollView>
 </SafeAreaView>
