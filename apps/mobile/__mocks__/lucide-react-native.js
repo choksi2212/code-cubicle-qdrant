@@ -5,6 +5,12 @@
  * runtime. The shim returns a deterministic React element keyed by icon
  * name so tests can assert presence ("this screen uses the Camera icon")
  * without rendering pixels.
+ *
+ * Every name exposed by src/components/Icon.tsx must be listed here so
+ * the shim stays in sync with the real wrapper. Aliases (CheckCircle2 →
+ * CircleCheck, AlertTriangle → TriangleAlert, XCircle → CircleX,
+ * Loader2 → Loader, MoreHorizontal → Ellipsis) are exported alongside
+ * their canonical lucide names.
  */
 
 const React = require('react');
@@ -17,10 +23,19 @@ const mkIcon = (name) => {
 };
 
 const NAMES = [
-  'Camera', 'RefreshCw', 'Settings', 'Sliders', 'ChevronLeft', 'ChevronRight',
-  'Search', 'Map', 'MapPin', 'Image', 'Folder', 'X', 'Check', 'AlertCircle',
-  'Plus', 'Minus', 'Database', 'Lock', 'LogOut', 'Trash2', 'Info', 'Wifi',
-  'WifiOff', 'Clock', 'Calendar', 'Hash',
+  'Camera', 'RefreshCw', 'Settings', 'Sliders', 'SlidersHorizontal',
+  'ChevronLeft', 'ChevronRight', 'ChevronDown', 'ChevronUp',
+  'Search', 'Map', 'MapPin', 'Image', 'ImageOff', 'ImagePlus',
+  'Folder', 'X', 'Check', 'AlertCircle', 'Plus', 'Minus',
+  'Database', 'Lock', 'LogOut', 'Trash2', 'Info', 'Wifi', 'WifiOff',
+  'Clock', 'Calendar', 'Hash',
+  'Sparkles', 'Wand2', 'Layers', 'Grid3x3', 'Compass', 'Aperture',
+  'Eye', 'Heart', 'Star', 'Bookmark', 'Share', 'Download', 'Upload',
+  'Filter', 'Loader', 'CircleCheck', 'TriangleAlert', 'CircleX',
+  'ArrowLeft', 'ArrowRight', 'Ellipsis', 'Smartphone', 'Shield',
+  'Power', 'HardDrive', 'Server',
+  // Aliases that resolve to the same underlying icon
+  'Loader2', 'CheckCircle2', 'AlertTriangle', 'XCircle', 'MoreHorizontal',
 ];
 
 const exports_ = {};

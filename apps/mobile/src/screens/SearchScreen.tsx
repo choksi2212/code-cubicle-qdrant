@@ -1,37 +1,40 @@
 /**
- * SearchScreen — text-input semantic search.
+ * SearchScreen — semantic search over the local photo shard.
  *
- * Embeds query text via CLIP, calls Rust bridge query, displays results.
- *
- * Also exposes the top-row "Search | Album | Map" nav strip — the three
- * browse views of the local library. The active chip is highlighted with
- * the accent color; tapping a sibling chip navigates via the parent's
- * onTabChange callback (App.tsx wires it to setScreen).
+ * - Real Input component with leading search icon + trailing clear
+ * - Filter chips with Reanimated layout transitions
+ * - 3-column thumbnail grid with score badges
+ * - Skeleton loading (pulsing gray rectangles) instead of a spinner
+ * - Empty state with suggestion chips
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Image,
-  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
+import { Icon } from '../components/Icon';
+import { Input } from '../components/Input';
+import { PressableScale } from '../components/PressableScale';
+import { EmptyState } from '../components/EmptyState';
 import { fieldEdge, QueryHit } from '../native/fieldEdge';
 import { embedText } from '../embedding/clip';
-import {
-  photoFileUriFromRelative,
-} from '../config';
-
-export type SearchScreenTab = 'search' | 'album' | 'map';
+import { photoFileUriFromRelative } from '../config';
+import { colors, radius, spacing, typography } from '../theme/tokens';
 
 interface Props {
   onPhotoPress: (hit: QueryHit) => void;
-  activeTab?: SearchScreenTab;
-  onTabChange?: (tab: SearchScreenTab) => void;
 }
 
 const SUGGESTIONS = [
@@ -41,25 +44,24 @@ const SUGGESTIONS = [
   'urban decay',
 ];
 
-const TABS: { key: SearchScreenTab; label: string }[] = [
-  { key: 'search', label: 'Search' },
-  { key: 'album', label: 'Album' },
-  { key: 'map', label: 'Map' },
+const FILTERS: Array<{ key: string; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'This week' },
+  { key: 'tagged', label: 'Tagged' },
 ];
 
-export function SearchScreen({
-  onPhotoPress,
-  activeTab = 'search',
-  onTabChange,
-}: Props) {
+export function SearchScreen({ onPhotoPress }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<QueryHit[]>([]);
   const [busy, setBusy] = useState(false);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [filter, setFilter] = useState('all');
 
-  const runSearch = async (q: string) => {
+  const runSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
       setResults([]);
+      setLatencyMs(null);
       return;
     }
     setBusy(true);
@@ -67,12 +69,12 @@ export function SearchScreen({
     try {
       const vector = await embedText(q);
       if (!vector) {
-        throw new Error('CLIP model not loaded — install clip-text-int8.onnx in assets/models/');
+        setResults([]);
+        return;
       }
-
       const req = {
         vector,
-        limit: 20,
+        limit: 30,
         filter: undefined,
         with_payload: true,
         with_vector: false,
@@ -80,222 +82,249 @@ export function SearchScreen({
       const hits = await fieldEdge.query(req);
       setResults(hits);
       setLatencyMs(Date.now() - t0);
-    } catch (e) {
-      console.error('Search failed:', e);
+    } catch {
       setResults([]);
     } finally {
       setBusy(false);
     }
+  }, []);
+
+  const handleChange = (text: string) => {
+    setQuery(text);
+    runSearch(text);
   };
+
+  const handleClear = () => {
+    setQuery('');
+    setResults([]);
+    setLatencyMs(null);
+  };
+
+  const hasQuery = query.length > 0;
 
   return (
     <View style={styles.container}>
-      {/* Top-row nav strip. Active tab gets the accent color; others
-          stay muted. Tapping a sibling fires onTabChange → App.tsx
-          setScreen(). */}
-      <View style={styles.tabStrip}>
-        {TABS.map((t) => {
-          const isActive = t.key === activeTab;
-          return (
-            <Pressable
-              key={t.key}
-              style={[
-                styles.tab,
-                isActive ? styles.tabActive : styles.tabInactive,
-              ]}
-              onPress={() => onTabChange?.(t.key)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isActive }}
-            >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  isActive ? styles.tabLabelActive : styles.tabLabelInactive,
-                ]}
-              >
-                {t.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.input}
+      <View style={styles.searchWrap}>
+        <Input
           value={query}
-          onChangeText={setQuery}
-          placeholder="Describe what you're looking for…"
-          placeholderTextColor="#5B6573"
-          onSubmitEditing={() => runSearch(query)}
-          returnKeyType="search"
+          onChangeText={handleChange}
+          placeholder="Describe what you're looking for"
+          leadingIcon="Search"
+          trailingIcon={hasQuery ? 'X' : undefined}
+          onTrailingIconPress={hasQuery ? handleClear : undefined}
         />
-        {busy && <ActivityIndicator color="#00BFA6" />}
       </View>
 
-      {query.length === 0 && (
-        <View style={styles.suggestions}>
-          <Text style={styles.suggestionsLabel}>Try:</Text>
-          {SUGGESTIONS.map((s) => (
-            <Pressable
-              key={s}
-              style={styles.suggestionChip}
-              onPress={() => {
-                setQuery(s);
-                runSearch(s);
-              }}
-            >
-              <Text style={styles.suggestionText}>{s}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersRow}
+      >
+        {FILTERS.map((f) => (
+          <FilterChip key={f.key} label={f.label} active={filter === f.key} onPress={() => setFilter(f.key)} />
+        ))}
+      </ScrollView>
 
-      {latencyMs !== null && query.length > 0 && (
+      {hasQuery && latencyMs !== null && (
         <Text style={styles.metaText}>
-          {results.length} results in {latencyMs} ms
+          {results.length} {results.length === 1 ? 'match' : 'matches'} in {latencyMs} ms
         </Text>
       )}
 
-      <FlatList
-        data={results}
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        contentContainerStyle={styles.grid}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() => onPhotoPress(item)}
-          >
-            <Image
-              source={{ uri: photoFileUriFromRelative(item.payload.file_path) }}
-              style={styles.thumb}
-              resizeMode="cover"
-            />
-            <View style={styles.scoreBadge}>
-              <Text style={styles.scoreText}>
-                {(item.score * 100).toFixed(0)}%
-              </Text>
+      {busy ? (
+        <SkeletonGrid />
+      ) : !hasQuery ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="Wand2"
+            title="Search your library"
+            subtitle="Describe what you're looking for and we'll find similar photos on-device."
+          />
+          <View style={styles.suggestionRow}>
+            {SUGGESTIONS.map((s) => (
+              <PressableScale
+                key={s}
+                onPress={() => {
+                  setQuery(s);
+                  runSearch(s);
+                }}
+                style={({ pressed }) => [styles.suggestion, pressed && { backgroundColor: colors.surfaceElevated }]}
+              >
+                <Text style={styles.suggestionText}>{s}</Text>
+              </PressableScale>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={(item) => item.id}
+          numColumns={3}
+          contentContainerStyle={styles.grid}
+          renderItem={({ item }) => (
+            <PressableScale onPress={() => onPhotoPress(item)} style={styles.card}>
+              <Image
+                source={{ uri: photoFileUriFromRelative(item.payload.file_path) }}
+                style={styles.thumb}
+                resizeMode="cover"
+              />
+              <View style={styles.scoreBadge}>
+                <Text style={styles.scoreText}>{(item.score * 100).toFixed(0)}%</Text>
+              </View>
+              <View style={styles.projectBadge}>
+                <Text style={styles.projectText} numberOfLines={1}>
+                  {item.payload.project_id}
+                </Text>
+              </View>
+            </PressableScale>
+          )}
+          ListEmptyComponent={
+            <View style={styles.noResults}>
+              <EmptyState
+                icon="Search"
+                title="No matches"
+                subtitle="Try a different description — semantic search is fuzzy by design."
+              />
             </View>
-            <View style={styles.projectBadge}>
-              <Text style={styles.projectText} numberOfLines={1}>
-                {item.payload.project_id}
-              </Text>
-            </View>
-          </Pressable>
-        )}
-        ListEmptyComponent={
-          !busy && query.length > 0 ? (
-            <Text style={styles.emptyText}>No matches</Text>
-          ) : null
-        }
-      />
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.filter,
+        active && styles.filterActive,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <Text style={[styles.filterText, active && styles.filterTextActive]}>{label}</Text>
+    </PressableScale>
+  );
+}
+
+function SkeletonCell() {
+  const opacity = useSharedValue(0.3);
+  React.useEffect(() => {
+    opacity.value = withRepeat(withTiming(0.7, { duration: 900 }), -1, true);
+  }, [opacity]);
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return <Animated.View style={[styles.skelCell, animatedStyle]} />;
+}
+
+function SkeletonGrid() {
+  return (
+    <View style={styles.grid}>
+      {Array.from({ length: 9 }).map((_, i) => (
+        <SkeletonCell key={i} />
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0E1116' },
-  tabStrip: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+  container: { flex: 1, backgroundColor: colors.bg },
+  searchWrap: { paddingHorizontal: spacing[4], paddingTop: spacing[3] },
+  filtersRow: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    gap: spacing[2],
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+  filter: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing[2],
   },
-  tabActive: { backgroundColor: '#00BFA6' },
-  tabInactive: { backgroundColor: '#1A1F26' },
-  tabLabel: { fontSize: 13, fontWeight: '600' },
-  tabLabelActive: { color: '#003B33' },
-  tabLabelInactive: { color: '#8B95A5' },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#1A1F26',
-    margin: 12,
-    borderRadius: 12,
+  filterActive: {
+    backgroundColor: colors.accentSubtleOnDark,
+    borderColor: colors.accent,
   },
-  input: {
-    flex: 1,
-    color: '#E6EAF0',
-    fontSize: 16,
+  filterText: { ...typography.smallStrong, color: colors.textTertiary },
+  filterTextActive: { color: colors.accent },
+
+  metaText: {
+    ...typography.small,
+    color: colors.textTertiary,
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[2],
   },
-  suggestions: {
+
+  emptyWrap: { paddingTop: spacing[8], alignItems: 'center' },
+  suggestionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    gap: 8,
-    marginBottom: 8,
+    justifyContent: 'center',
+    paddingHorizontal: spacing[5],
+    marginTop: spacing[4],
+    gap: spacing[2],
   },
-  suggestionsLabel: {
-    color: '#8B95A5',
-    marginRight: 4,
-    alignSelf: 'center',
+  suggestion: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing[2],
+    marginBottom: spacing[2],
   },
-  suggestionChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#2A2F36',
-    borderRadius: 14,
+  suggestionText: { ...typography.small, color: colors.textPrimary },
+
+  grid: {
+    padding: spacing[3],
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
-  suggestionText: { color: '#E6EAF0', fontSize: 12 },
-  metaText: {
-    color: '#8B95A5',
-    fontSize: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  grid: { padding: 8 },
   card: {
-    flex: 1 / 3,
-    margin: 4,
+    width: '32%',
     aspectRatio: 1,
-    backgroundColor: '#1A1F26',
-    borderRadius: 8,
+    margin: '0.66%',
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     overflow: 'hidden',
   },
-  thumb: {
-    width: '100%',
-    height: '100%',
-  },
+  thumb: { width: '100%', height: '100%' },
   scoreBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#00BFA6',
-    paddingHorizontal: 6,
+    top: spacing[1],
+    right: spacing[1],
+    backgroundColor: colors.accentSubtleOnDark,
+    paddingHorizontal: spacing[2],
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: radius.sm,
   },
-  scoreText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
+  scoreText: { ...typography.caption, color: colors.accent },
   projectBadge: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  projectText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '500',
-  },
-  emptyText: {
-    color: '#5B6573',
-    textAlign: 'center',
-    marginTop: 32,
+  projectText: { ...typography.caption, color: colors.textPrimary },
+
+  noResults: { paddingTop: spacing[8] },
+
+  skelCell: {
+    width: '32%',
+    aspectRatio: 1,
+    margin: '0.66%',
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

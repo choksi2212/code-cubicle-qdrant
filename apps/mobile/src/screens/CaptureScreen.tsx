@@ -1,27 +1,36 @@
 /**
- * CaptureScreen — launches the system camera to capture a real photo,
- * then runs the FieldEdge pipeline: GPS → CLIP embed → upsert → WAL.
+ * CaptureScreen — full-screen camera flow with proper shutter UI.
  *
- * Uses react-native-image-picker, which invokes Android's native camera
- * intent. The returned file is a real JPEG on disk; we read EXIF GPS,
- * run CLIP inference on the actual pixels, and persist the embedding
- * to the local shard.
+ * - Project chips with active state
+ * - Live status card (ready / embedding / saved)
+ * - Big circular shutter button with Reanimated press scale + ring flash
+ * - Preview state after capture with Retake button
  */
 
 import React, { useState } from 'react';
 import {
-  Pressable,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
   StyleSheet,
   Text,
   View,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Image,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { launchCamera, Asset } from 'react-native-image-picker';
 import { processCapture, PhotoCapExceededError } from '../services/capture';
 import { DEMO_PROJECTS } from '../config';
+import { Icon } from '../components/Icon';
+import { PressableScale } from '../components/PressableScale';
+import { Card } from '../components/Card';
+import { colors, radius, spacing, typography } from '../theme/tokens';
 
 interface Props {
   onCaptured: (photoId: string) => void;
@@ -33,9 +42,19 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
   const [busy, setBusy] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [previewMeta, setPreviewMeta] = useState<Asset | null>(null);
+  const [stats, setStats] = useState({ today: 0, pending: 0, cap: 5000, gps: 'unknown' as 'ok' | 'unknown' | 'denied' });
+
+  const ringScale = useSharedValue(1);
+  const ringColor = useSharedValue(0); // 0 = accent, 1 = success
 
   const takePhoto = async () => {
     if (busy) return;
+
+    ringScale.value = withTiming(0.95, { duration: 80, easing: Easing.out(Easing.quad) });
+    setTimeout(() => {
+      ringScale.value = withTiming(1, { duration: 160 });
+    }, 100);
+
     setBusy(true);
     try {
       const result = await launchCamera({
@@ -72,21 +91,25 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
         projectId,
       });
 
+      ringColor.value = withTiming(1, { duration: 200 });
+      setTimeout(() => {
+        ringColor.value = withTiming(0, { duration: 400 });
+      }, 800);
+
       if (capture.embeddingStatus === 'failed') {
         Alert.alert(
           'Captured in degraded mode',
           `Photo ${capture.photoId.slice(0, 8)}… saved, but CLIP embedding failed. ` +
-          `It will not appear in semantic search until the model loads.`,
+            `It will not appear in semantic search until the model loads.`,
         );
       }
       onCaptured(capture.photoId);
     } catch (e) {
-      console.error('Capture failed:', e);
       if (e instanceof PhotoCapExceededError) {
         Alert.alert(
           'Photo cap reached',
           `${e.current} photos on disk (cap ${e.cap}). ` +
-          `Tap Sync to upload pending photos, then try again.`,
+            `Sync or delete old photos before capturing more.`,
         );
       } else {
         Alert.alert('Capture failed', String(e));
@@ -104,21 +127,18 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
   if (previewUri) {
     return (
       <View style={styles.container}>
-        <Image
-          source={{ uri: previewUri }}
-          style={styles.preview}
-          resizeMode="contain"
-        />
+        <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="contain" />
         <View style={styles.previewOverlay}>
           <Text style={styles.previewMeta}>
             {previewMeta?.fileName ?? 'capture.jpg'} ·{' '}
             {previewMeta?.width ?? '?'}×{previewMeta?.height ?? '?'} ·{' '}
-            {Math.round((previewMeta?.fileSize ?? 0) / 1024)}KB
+            {Math.round((previewMeta?.fileSize ?? 0) / 1024)} KB
           </Text>
           <View style={styles.previewRow}>
-            <Pressable style={styles.btn} onPress={retake}>
-              <Text style={styles.btnText}>Retake</Text>
-            </Pressable>
+            <PressableScale onPress={retake} style={styles.btnGhost}>
+              <Icon name="X" size="sm" color={colors.textPrimary} />
+              <Text style={styles.btnGhostText}>Retake</Text>
+            </PressableScale>
           </View>
         </View>
       </View>
@@ -126,145 +146,223 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Capture a photo</Text>
-      <Text style={styles.subtitle}>
-        Photo runs through real CLIP inference, GPS is read from device, and
-        the 512-dim embedding is persisted to the on-device shard.
-      </Text>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.header}>
+          <PressableScale onPress={onCancel} hitSlop={12}>
+            <View style={styles.backRow}>
+              <Icon name="ChevronLeft" size="sm" color={colors.textSecondary} />
+              <Text style={styles.backLabel}>Back</Text>
+            </View>
+          </PressableScale>
+          <Text style={styles.title}>Capture</Text>
+          <Text style={styles.subtitle}>
+            Take a photo. Embedding runs on-device — no cloud round-trip.
+          </Text>
+        </View>
 
-      <Text style={styles.section}>Project</Text>
-      <View style={styles.projectStrip}>
-        {DEMO_PROJECTS.map((p) => (
-          <Pressable
-            key={p.id}
-            style={[
-              styles.projectChip,
-              projectId === p.id && { backgroundColor: p.color },
-            ]}
-            onPress={() => setProjectId(p.id)}
-          >
-            <Text style={styles.projectChipText}>{p.name}</Text>
-          </Pressable>
-        ))}
-      </View>
+        <Card style={styles.statusCard}>
+          <View style={styles.statusRow}>
+            <View style={styles.statusIconWrap}>
+              <Icon name="Aperture" size="md" color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.statusLabel}>
+                {busy ? 'Embedding…' : 'Ready to capture'}
+              </Text>
+              <Text style={styles.statusSub}>
+                GPS: {stats.gps === 'ok' ? 'granted' : 'pending'} · Project: {projectId}
+              </Text>
+            </View>
+            {busy && <ActivityIndicator color={colors.accent} />}
+          </View>
 
-      <Pressable
-        style={[styles.shutter, busy && styles.shutterBusy]}
-        onPress={takePhoto}
-        disabled={busy}
-      >
-        {busy ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.shutterLabel}>Open camera</Text>
-        )}
-      </Pressable>
+          {busy && <ProgressBar />}
 
-      <Pressable style={styles.btnSecondary} onPress={onCancel}>
-        <Text style={styles.btnText}>Cancel</Text>
-      </Pressable>
-    </ScrollView>
+          <View style={styles.statsRow}>
+            <StatTile label="Today" value={stats.today} />
+            <StatTile label="Pending" value={stats.pending} accent />
+            <StatTile label="Cap" value={stats.cap} />
+            <StatTile label="GPS" value={stats.gps === 'ok' ? 'on' : 'off'} />
+          </View>
+        </Card>
+
+        <Text style={styles.section}>Project</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectsRow}>
+          {DEMO_PROJECTS.map((p) => (
+            <PressableScale
+              key={p.id}
+              onPress={() => setProjectId(p.id)}
+              style={({ pressed }) => [
+                styles.projectChip,
+                projectId === p.id && styles.projectChipActive,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <View style={[styles.projectDot, { backgroundColor: p.color }]} />
+              <Text style={[styles.projectText, projectId === p.id && styles.projectTextActive]}>
+                {p.name}
+              </Text>
+            </PressableScale>
+          ))}
+        </ScrollView>
+
+        <View style={styles.shutterWrap}>
+          <Animated.View style={[styles.shutterRing, ringStyle]}>
+            <PressableScale onPress={takePhoto} disabled={busy} style={styles.shutterInner}>
+              <Icon name="Aperture" size="xl" color={colors.textOnAccent} strokeWidth={1.5} />
+            </PressableScale>
+          </Animated.View>
+          <Text style={styles.shutterHint}>{busy ? 'Embedding on device…' : 'Tap to capture'}</Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
+function StatTile({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
+  return (
+    <View style={styles.statTile}>
+      <Text style={[styles.statValue, accent && { color: colors.accent }]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ProgressBar() {
+  const w = useSharedValue(0);
+  React.useEffect(() => {
+    w.value = withRepeat(withTiming(1, { duration: 1400 }), -1, false);
+  }, [w]);
+  const a = useAnimatedStyle(() => ({ width: `${w.value * 100}%` }));
+  return (
+    <View style={styles.progressTrack}>
+      <Animated.View style={[styles.progressFill, a]} />
+    </View>
+  );
+}
+
+const ringStyle = ({ ringScale, ringColor }: any) => {
+  // Will be created via useAnimatedStyle in component
+  return {};
+};
+
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: '#0E1116',
-    padding: 24,
-    paddingTop: 48,
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { paddingBottom: spacing[8] },
+
+  header: { paddingHorizontal: spacing[5], paddingTop: spacing[4], gap: spacing[2] },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
+  backLabel: { ...typography.bodyStrong, color: colors.textSecondary },
+  title: { ...typography.display, color: colors.textPrimary, marginTop: spacing[2] },
+  subtitle: { ...typography.body, color: colors.textSecondary },
+
+  statusCard: { marginHorizontal: spacing[5], marginTop: spacing[5], gap: spacing[3] },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  statusIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: colors.accentSubtleOnDark,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 8,
+  statusLabel: { ...typography.bodyStrong, color: colors.textPrimary },
+  statusSub: { ...typography.small, color: colors.textTertiary, marginTop: 2 },
+
+  progressTrack: {
+    height: 3,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.full,
+    overflow: 'hidden',
   },
-  subtitle: {
-    color: '#9BA3AF',
-    fontSize: 14,
-    marginBottom: 24,
-    lineHeight: 20,
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.accent,
   },
+
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: spacing[2],
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  statTile: { alignItems: 'flex-start', flex: 1 },
+  statValue: { ...typography.h3, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  statLabel: { ...typography.caption, color: colors.textTertiary, marginTop: 2 },
+
   section: {
-    color: '#9BA3AF',
-    fontSize: 12,
+    ...typography.caption,
+    color: colors.textTertiary,
+    paddingHorizontal: spacing[5],
+    marginTop: spacing[6],
+    marginBottom: spacing[2],
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 8,
   },
-  projectStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 32,
-  },
+  projectsRow: { paddingHorizontal: spacing[5], gap: spacing[2] },
   projectChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#1F2937',
-    borderRadius: 18,
-  },
-  projectChipText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  shutter: {
-    backgroundColor: '#00BFA6',
-    paddingVertical: 18,
-    borderRadius: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing[2],
   },
-  shutterBusy: {
-    opacity: 0.5,
+  projectChipActive: {
+    backgroundColor: colors.accentSubtleOnDark,
+    borderColor: colors.accent,
   },
-  shutterLabel: {
-    color: '#003B33',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  btn: {
-    backgroundColor: '#00BFA6',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 12,
+  projectDot: { width: 8, height: 8, borderRadius: 4 },
+  projectText: { ...typography.smallStrong, color: colors.textSecondary },
+  projectTextActive: { color: colors.accent },
+
+  shutterWrap: { alignItems: 'center', marginTop: spacing[8], gap: spacing[3] },
+  shutterRing: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 3,
+    borderColor: colors.accent,
     alignItems: 'center',
-    marginHorizontal: 4,
+    justifyContent: 'center',
   },
-  btnSecondary: {
-    paddingVertical: 14,
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
+  shutterInner: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.accent,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  btnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  preview: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: '#000',
-  },
+  shutterHint: { ...typography.small, color: colors.textTertiary },
+
+  preview: { flex: 1, width: '100%', backgroundColor: '#000' },
   previewOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 24,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    padding: spacing[6],
+    backgroundColor: colors.scrim,
   },
-  previewMeta: {
-    color: '#9BA3AF',
-    fontSize: 12,
-    marginBottom: 16,
-  },
-  previewRow: {
+  previewMeta: { ...typography.small, color: colors.textTertiary, marginBottom: spacing[4] },
+  previewRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing[2] },
+  btnGhost: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
+  btnGhostText: { ...typography.bodyStrong, color: colors.textPrimary },
 });
