@@ -339,19 +339,20 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: 'HS256-signed JWT issued by /auth/login. The token's `sub`
+      description: 'HS256-signed JWT issued by /auth/login. The token
 
-        claim is the device_id and the `type` claim is `access`. Tokens
+        carries the device_id as its `sub` claim and the literal
 
-        expire after JWT_ACCESS_TTL_SECONDS (default 900s = 15 min);
+        string `access` as its `type` claim. Tokens expire after
 
-        refresh via /auth/refresh. The v0 login endpoint accepts any
+        JWT_ACCESS_TTL_SECONDS (default 900s = 15 min); refresh via
 
-        8+ char device_token -- OIDC swap replaces that with a real
+        /auth/refresh. The v0 login endpoint accepts any 8+ char
 
-        auth-code exchange.
+        device_token -- OIDC swap replaces that with a real
 
-        '
+        auth-code exchange.'
+
   responses:
     Unauthorized:
       description: Missing or invalid Bearer token

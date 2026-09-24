@@ -35,6 +35,11 @@ if str(ROOT / "apps" / "sync-api") not in sys.path:
 
 from app.main import app  # noqa: E402
 from app.services import qdrant as qdrant_svc  # noqa: E402
+from app.auth import create_access_token  # noqa: E402
+
+# Mint a real access JWT for the test fixture. The token's `sub` claim
+# is "device-abc-1234" so seeded payloads with that device_id round-trip.
+_TEST_BEARER_TOKEN = create_access_token("device-abc-1234")
 
 OPENAPI_PATH = ROOT / "apps" / "sync-api" / "openapi.yaml"
 
@@ -170,7 +175,7 @@ async def client(fake_qdrant):
         async with httpx.AsyncClient(
             transport=transport,
             base_url="http://testserver",
-            headers={"Authorization": "Bearer dev_device-abc-1234"},
+            headers={"Authorization": f"Bearer {_TEST_BEARER_TOKEN}"},
         ) as ac:
             yield ac
 

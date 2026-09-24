@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from loguru import logger
 
-from app.auth import verify_device_token
+from app.auth import AuthContext, require_auth
 from app.config import settings
 from app.logging_config import bind as log_bind
 from app.models import (
@@ -47,10 +47,11 @@ def _request_id(request: Request) -> str:
 async def upload_points(
     req: UploadRequest,
     request: Request,
-    device_id: str = Depends(verify_device_token),
+    ctx: AuthContext = Depends(require_auth),
 ):
     """Accept a batch of points from a device and write to the central cluster."""
     rid = _request_id(request)
+    device_id = ctx.device_id
     logg = log_bind(request_id=rid, device_id=device_id, op="sync.upload")
 
     if len(req.points) > 100:
@@ -201,11 +202,12 @@ async def upload_points(
 async def pull_updates(
     request: Request,
     since: str | None = Query(default=None),
-    device_id: str = Depends(verify_device_token),
+    ctx: AuthContext = Depends(require_auth),
     limit: int = Query(default=100, le=500),
 ):
     """Return cloud-side updates since the given cursor."""
     rid = _request_id(request)
+    device_id = ctx.device_id
     logg = log_bind(request_id=rid, device_id=device_id, op="sync.pull")
 
     if since:
@@ -242,7 +244,7 @@ async def pull_updates(
 async def wal_replay(
     req: WalReplayRequest,
     request: Request,
-    device_id: str = Depends(verify_device_token),
+    ctx: AuthContext = Depends(require_auth),
 ):
     """FR-080 — replay a previously-uploaded batch after a crash.
 
@@ -252,6 +254,7 @@ async def wal_replay(
     point ID and returns the per-point result.
     """
     rid = _request_id(request)
+    device_id = ctx.device_id
     logg = log_bind(
         request_id=rid,
         device_id=device_id,

@@ -1,6 +1,7 @@
 """Application settings via Pydantic."""
 
 import os
+import secrets
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,6 +15,41 @@ def _find_env_file() -> Path | None:
         if candidate.exists():
             return candidate
     return None
+
+
+# Placeholder default for the JWT signing secret. The first time the process
+# boots we replace this with a randomly generated 64-byte hex string and
+# persist it to disk so subsequent restarts keep signing with the same key.
+# Production should set JWT_SECRET explicitly via the environment — the
+# auto-generation is a hackathon-grade convenience so the dev demo works
+# out of the box without manual setup.
+_GENERATED_SECRET_FILE = Path(__file__).resolve().parent / ".jwt_secret"
+
+
+def _load_or_generate_jwt_secret() -> str:
+    """Return a stable JWT_SECRET across restarts.
+
+    Order:
+      1. Process env `JWT_SECRET` (preferred — Render/prod sets this).
+      2. A file at `apps/sync-api/app/.jwt_secret` we wrote on first boot.
+      3. Newly generated secrets.token_hex(32), persisted to that file.
+    """
+    env_val = os.environ.get("JWT_SECRET")
+    if env_val:
+        return env_val
+    if _GENERATED_SECRET_FILE.exists():
+        stored = _GENERATED_SECRET_FILE.read_text(encoding="utf-8").strip()
+        if stored:
+            return stored
+    fresh = secrets.token_hex(32)
+    try:
+        _GENERATED_SECRET_FILE.write_text(fresh, encoding="utf-8")
+    except OSError:
+        # Filesystem not writable (e.g. read-only deploy) — fall back to the
+        # in-memory value for this process. Tokens won't survive restart,
+        # but the server still boots.
+        pass
+    return fresh
 
 
 class Settings(BaseSettings):
@@ -39,6 +75,8 @@ class Settings(BaseSettings):
 
     # Auth
     jwt_secret: str = "change-me-in-production"
+    jwt_access_ttl_seconds: int = 900       # 15 min
+    jwt_refresh_ttl_seconds: int = 604_800  # 7 days
     rate_limit_per_minute: int = 60
 
     # enrichment (forwarded from mobile for enrichment triggers)
@@ -57,7 +95,21 @@ settings = Settings()
 # so we never depend on pydantic-settings cache behaviour. Settings()'s defaults
 # are still the source of truth for type validation, but this guarantees
 # the live value matches what Render injected.
-for _key in ("qdrant_url", "qdrant_api_key", "qdrant_collection", "jwt_secret", "port"):
+for _key in (
+    "qdrant_url",
+    "qdrant_api_key",
+    "qdrant_collection",
+    "jwt_secret",
+    "jwt_access_ttl_seconds",
+    "jwt_refresh_ttl_seconds",
+    "port",
+):
     _env_val = os.environ.get(_key.upper())
     if _env_val is not None:
         setattr(settings, _key, _env_val)
+
+# If process env never set jwt_secret and the placeholder is still in place,
+# swap it for a stable random one (persisted on disk). This MUST run after
+# the env-loop above so explicit JWT_SECRET wins.
+if settings.jwt_secret == "change-me-in-production":
+    settings.jwt_secret = _load_or_generate_jwt_secret()
