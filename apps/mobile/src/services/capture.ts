@@ -62,8 +62,9 @@ export async function processCapture(input: CaptureInput): Promise<CaptureResult
     throw new Error('CLIP model returned no embedding');
   }
 
-  // 3. SHA-256 checksum
-  const checksum = await fieldEdge.checksum(vector);
+  // 3. SHA-256 checksum (Rust returns {status, value:{checksum}})
+  const checksumResp = await fieldEdge.checksum(vector);
+  const checksumStr = checksumResp?.value?.checksum ?? '';
 
   // 4. Build payload (PRD §7.5)
   const payload: Payload = {
@@ -83,7 +84,7 @@ export async function processCapture(input: CaptureInput): Promise<CaptureResult
     cloudinary_ocr_text: null,
     synced_at: null,
     local_updated_at: capturedAt,
-    vector_checksum: checksum,
+    vector_checksum: checksumStr,
   };
 
   // 5. Upsert to local Edge shard (Rust core)
@@ -94,12 +95,17 @@ export async function processCapture(input: CaptureInput): Promise<CaptureResult
     throw new Error('Upsert returned 0 — Edge shard rejected the point');
   }
 
-  // 6. Append to WAL (sync queue)
+  // 6. Append to WAL (sync queue).
+  //    Strip the `vector` and `payload` from the WAL entry — the server
+  //    has them via the upload batch. WAL stores only id/checksum/metadata.
+  //    This sidesteps the column-7288 PARSE_ERROR we hit when serializing
+  //    the full 512-float vector + payload via the RN bridge.
   await fieldEdge.walAppend(`${SHARD_DIR}/sync.wal`, JSON.stringify({
     op: 'upsert',
     seq: Date.now(),
-    point: { id: photoId, vector, payload },
     point_id: photoId,
+    vector_checksum: checksumStr,
+    project_id: projectId,
     ts: capturedAt,
     sync_state: 'pending',
   }));

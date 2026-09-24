@@ -28,9 +28,10 @@ pub enum WalError {
 }
 
 /// WAL operation type
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum WalOp {
+    #[default]
     Upsert,
     Delete,
     OptimizeHint,
@@ -38,6 +39,7 @@ pub enum WalOp {
 
 /// A single WAL entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct WalEntry {
     pub op: WalOp,
     pub seq: u64,

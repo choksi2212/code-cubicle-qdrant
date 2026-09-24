@@ -2,12 +2,14 @@
  * Real sync orchestrator.
  *
  * Flow:
- *  1. Compute diff: local (from WAL) vs remote (Qdrant Cloud snapshot)
- *  2. Upload new points via POST /sync/upload
- *  3. Pull remote updates via GET /sync/pull (cursor-based)
- *  4. Resolve conflicts via Rust bridge
- *  5. Apply resolved points to local Edge shard
- *  6. Emit SyncReport for UI
+ *   1. Read WAL entries (point_id + checksum + project_id)
+ *   2. Look up each point's full payload + vector from the local Rust shard
+ *   3. Compute diff: local vs remote (Qdrant Cloud snapshot)
+ *   4. Upload new points via POST /sync/upload
+ *   5. Pull remote updates via GET /sync/pull
+ *   6. Resolve conflicts via Rust bridge
+ *   7. Apply resolved points to local Edge shard
+ *   8. Emit SyncReport for UI
  *
  * The orchestrator is idempotent: re-running after a partial failure
  * picks up where it left off.
@@ -18,6 +20,15 @@ import { apiClient } from './api';
 import { deviceId } from '../config';
 
 const WAL_PATH_DEFAULT = '/data/data/com.fieldedge/files/edge-shard/sync.wal';
+
+interface WalEntry {
+  op: 'upsert' | 'delete' | 'optimize_hint';
+  point_id: string;
+  vector_checksum: string;
+  project_id: string;
+  ts: string;
+  sync_state: 'pending' | 'synced' | 'failed';
+}
 
 export interface SyncMetrics {
   startedAt: Date;
@@ -50,86 +61,80 @@ export async function runSync(
 
   onProgress?.('Reading pending writes…');
 
-  // 1. Read pending WAL entries → batch of points to upload
-  const walJson = await fieldEdge.walReadAll(walPath);
-  const walEntries = JSON.parse(walJson) as Array<{
-    op: string;
-    sync_state: string;
-    point_id: string;
-    point: { id: string; vector: number[]; payload: Payload } | null;
-  }>;
+  // 1. Read pending WAL entries.
+  //    WAL may not exist yet — treat as empty.
+  let walEntries: WalEntry[] = [];
+  try {
+    const walJson = await fieldEdge.walReadAll(walPath);
+    const parsed = JSON.parse(walJson);
+    if (parsed && Array.isArray(parsed)) {
+      walEntries = parsed;
+    }
+  } catch (e) {
+    console.warn('[sync] wal read failed, treating as empty:', e);
+  }
 
   const pending = walEntries.filter(
-    (e) => e.op === 'upsert' && e.sync_state === 'pending' && e.point !== null,
+    (e) => e.op === 'upsert' && e.sync_state === 'pending',
   );
 
   onProgress?.(`Found ${pending.length} pending uploads`);
 
-  if (pending.length === 0) {
-    metrics.finishedAt = new Date();
-    return metrics;
-  }
-
-  // 2. Compute server snapshot (lightweight: just IDs + checksums)
-  // For now, fetch a small "remote state" sample via /sync/pull's first page
-  const remoteState = await fetchRemoteStateSnapshot();
-
-  // 3. Compute diff using Rust bridge
-  const localState: Record<string, Payload> = {};
-  for (const e of pending) {
-    if (e.point) localState[e.point.id] = e.point.payload;
-  }
-
-  const diffJson = await fieldEdge.computeSyncDiff(
-    JSON.stringify(localState),
-    JSON.stringify(remoteState),
-  );
-  const diff = JSON.parse(diffJson) as SyncDiff;
-
-  onProgress?.(
-    `Diff: ${diff.to_upload.length} upload, ${diff.to_download.length} download, ${diff.conflicts.length} conflicts`,
-  );
-
-  // 4. Upload batch
-  if (diff.to_upload.length > 0 || pending.length > 0) {
+  // 2. Look up full point data (id + vector + payload) from local shard.
+  const localPoints: Array<{
+    id: string;
+    vector: number[];
+    payload: Payload;
+  }> = [];
+  if (pending.length > 0) {
     try {
-      const batchSize = 50;
-      for (let i = 0; i < pending.length; i += batchSize) {
-        const slice = pending.slice(i, i + batchSize);
-        const pointsToUpload = slice
-          .filter((e) => e.point !== null)
-          .map((e) => ({
-            id: e.point!.id,
-            vector: e.point!.vector,
-            payload: e.point!.payload,
-          }));
-
-        const batchId = `${startedAt.toISOString()}-${i}`;
-        const req = {
-          device_id: deviceId,
-          batch_id: batchId,
-          points: pointsToUpload,
-        };
-
-        const resp = await apiClient.uploadBatch(req);
-        metrics.uploaded += resp.results.filter((r) => r.status === 'accepted').length;
-        metrics.conflicts += resp.results.filter((r) =>
-          r.status === 'conflict_resolved',
-        ).length;
-        metrics.resolved += resp.results.filter((r) =>
-          r.status === 'conflict_resolved',
-        ).length;
-
-        // Mark WAL entries as synced
-        // (In v1: just count; real impl would write back to WAL)
+      const ids = pending.map((e) => e.point_id);
+      const lookupJson = await fieldEdge.retrieve(ids);
+      const lookupResp = JSON.parse(lookupJson);
+      if (lookupResp?.value && Array.isArray(lookupResp.value)) {
+        for (const p of lookupResp.value) {
+          localPoints.push({
+            id: p.id,
+            vector: p.vector,
+            payload: p.payload,
+          });
+        }
       }
     } catch (e) {
-      console.error('Upload batch failed:', e);
-      metrics.errors++;
+      console.warn('[sync] local lookup failed:', e);
     }
   }
 
-  // 5. Pull remote updates
+  if (localPoints.length === 0) {
+    metrics.finishedAt = new Date();
+    onProgress?.('Nothing to upload');
+    return metrics;
+  }
+
+  // 3. Upload batch to the sync API.
+  try {
+    const batchId = `${startedAt.toISOString()}-${deviceId}`;
+    const req = {
+      device_id: deviceId,
+      batch_id: batchId,
+      points: localPoints,
+    };
+    const resp = await apiClient.uploadBatch(req);
+    metrics.uploaded += resp.results.filter((r) => r.status === 'accepted').length;
+    metrics.conflicts += resp.results.filter(
+      (r) => r.status === 'conflict_resolved',
+    ).length;
+    metrics.resolved += resp.results.filter(
+      (r) => r.status === 'conflict_resolved',
+    ).length;
+    metrics.errors += resp.results.filter((r) => r.status === 'error').length;
+    onProgress?.(`Uploaded ${metrics.uploaded} points`);
+  } catch (e) {
+    console.error('[sync] upload batch failed:', e);
+    metrics.errors++;
+  }
+
+  // 4. Pull remote updates
   try {
     onProgress?.('Pulling remote updates…');
     const pull = await apiClient.pullUpdates({
@@ -144,31 +149,13 @@ export async function runSync(
       ]);
       metrics.downloaded++;
     }
+    onProgress?.(`Pulled ${metrics.downloaded} points`);
   } catch (e) {
-    console.error('Pull failed:', e);
+    console.error('[sync] pull failed:', e);
     metrics.errors++;
   }
 
   metrics.finishedAt = new Date();
   onProgress?.('Sync complete');
   return metrics;
-}
-
-async function fetchRemoteStateSnapshot(): Promise<Record<string, Payload>> {
-  try {
-    // Get a small sample of remote points for diff computation.
-    // The server returns full payloads which we then map to our schema.
-    const pull = await apiClient.pullUpdates({
-      device_id: deviceId,
-      limit: 200,
-    });
-
-    const map: Record<string, Payload> = {};
-    for (const p of pull.points) {
-      map[p.id] = p.payload as unknown as Payload;
-    }
-    return map;
-  } catch {
-    return {};
-  }
 }
