@@ -55,6 +55,9 @@ fn make_payload(id: &str, project: &str, ts: &str) -> Payload {
         synced_at: None,
         local_updated_at: ts.into(),
         vector_checksum: vector_checksum(&vec),
+        deletion_marker: false,
+        project_owner: None,
+        tags_v2: vec![],
     }
 }
 

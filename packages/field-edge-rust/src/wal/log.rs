@@ -7,7 +7,9 @@
 //! crash recovery can replay them.
 
 use crate::edge::Point;
+use crate::models::payload::VersionedPayload;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -107,6 +109,29 @@ fn byte_to_WalOp(b: u8) -> Result<WalOp, WalError> {
     }
 }
 
+/// Route a WAL entry's payload through `VersionedPayload` so v1 entries
+/// recorded by older devices are upgraded to v2 on replay.
+///
+/// The shape of a WAL entry is `{ "op": ..., "seq": ..., "point": { "id": ...,
+/// "vector": [...], "payload": {...} }, ... }`. We only touch the inner
+/// `payload` object; the rest of the entry passes through unchanged.
+fn migrate_wal_payload(value: Result<Value, serde_json::Error>) -> Result<Value, WalError> {
+    let mut value = value?;
+
+    if let Some(point) = value.get_mut("point").and_then(|p| p.as_object_mut()) {
+        if let Some(payload_val) = point.get_mut("payload") {
+            // Take ownership of the inner payload value, migrate it, and
+            // splice the v2 form back in.
+            let raw = payload_val.take();
+            let versioned = VersionedPayload::from_value(raw).map_err(WalError::Json)?;
+            let migrated = versioned.migrate_to_v2();
+            *payload_val = serde_json::to_value(migrated).map_err(WalError::Json)?;
+        }
+    }
+
+    Ok(value)
+}
+
 /// WAL reader (iterator-style)
 pub struct WalReader {
     file: BufReader<File>,
@@ -169,12 +194,15 @@ impl Iterator for WalReader {
         }
         self.offset += len as u64;
 
-        match serde_json::from_slice::<WalEntry>(&payload) {
-            Ok(mut entry) => {
-                entry.op = op; // ensure op matches what we read
-                Some(Ok(entry))
-            }
-            Err(e) => Some(Err(WalError::Json(e))),
+        match migrate_wal_payload(serde_json::from_slice::<Value>(&payload)) {
+            Ok(value) => match serde_json::from_value::<WalEntry>(value) {
+                Ok(mut entry) => {
+                    entry.op = op; // ensure op matches what we read
+                    Some(Ok(entry))
+                }
+                Err(e) => Some(Err(WalError::Json(e))),
+            },
+            Err(e) => Some(Err(e)),
         }
     }
 }
@@ -187,7 +215,7 @@ mod tests {
 
     fn make_entry(seq: u64, id: &str) -> WalEntry {
         let payload = Payload {
-            schema_version: 1,
+            schema_version: 2,
             photo_id: id.into(),
             device_id: "dev".into(),
             captured_at: "2025-05-12T14:23:01Z".into(),
@@ -204,6 +232,9 @@ mod tests {
             synced_at: None,
             local_updated_at: "2025-05-12T14:23:01Z".into(),
             vector_checksum: "sha256:abc".into(),
+            deletion_marker: false,
+            project_owner: None,
+            tags_v2: vec![],
         };
 
         WalEntry {

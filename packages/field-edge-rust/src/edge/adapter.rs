@@ -357,6 +357,9 @@ mod tests {
             synced_at: None,
             local_updated_at: "2025-05-12T14:23:01Z".into(),
             vector_checksum: vector_checksum(&vec![0.1; 512]),
+            deletion_marker: false,
+            project_owner: None,
+            tags_v2: vec![],
         }
     }
 

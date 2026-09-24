@@ -91,7 +91,7 @@ mod tests {
 
     fn payload(id: &str, ts: &str, checksum: &str) -> Payload {
         Payload {
-            schema_version: 1,
+            schema_version: 2,
             photo_id: id.to_string(),
             device_id: "dev-1".into(),
             captured_at: "2025-05-12T14:23:01.000Z".into(),
@@ -108,6 +108,9 @@ mod tests {
             synced_at: None,
             local_updated_at: ts.into(),
             vector_checksum: checksum.into(),
+            deletion_marker: false,
+            project_owner: None,
+            tags_v2: vec![],
         }
     }
 
