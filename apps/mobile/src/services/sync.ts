@@ -27,11 +27,25 @@ export interface SyncMetrics {
   finishedAt: Date;
   uploaded: number;
   downloaded: number;
-  conflicts: number;
+  /**
+   * Per-conflict audit entries populated from the server's upload response.
+   * Each entry carries the photo_id and the winner ("local" | "remote")
+   * so the SyncReportScreen can render a drill-down list and navigate
+   * to ConflictDetailScreen for the full audit payload.
+   *
+   * Empty when no conflicts occurred in this run.
+   */
+  conflicts: ConflictEntry[];
   resolved: number;
   errors: number;
   bytesUploaded: number;
   bytesDownloaded: number;
+}
+
+export interface ConflictEntry {
+  photo_id: string;
+  winner: 'local' | 'remote' | 'merged';
+  fields_changed: string[];
 }
 
 export type { SyncMetrics as SyncReport };
@@ -54,7 +68,7 @@ export async function runSync(
     finishedAt: startedAt,
     uploaded: 0,
     downloaded: 0,
-    conflicts: 0,
+    conflicts: [],
     resolved: 0,
     errors: 0,
     bytesUploaded: 0,
@@ -110,8 +124,18 @@ export async function runSync(
               accepted++;
             } else if (r.status === 'conflict_resolved') {
               accepted++;
-              metrics.conflicts++;
               metrics.resolved++;
+              // Populate the per-conflict entry from the server's resolution
+              // metadata. Fields-changed is empty here because the server's
+              // upload response doesn't carry it — ConflictDetailScreen
+              // calls /sync/conflicts/:photo_id for the full diff.
+              metrics.conflicts.push({
+                photo_id: r.id,
+                winner: (r.resolution === 'local_wins' ? 'local' : 'remote') as
+                  | 'local'
+                  | 'remote',
+                fields_changed: [],
+              });
             } else {
               errored++;
             }
@@ -169,8 +193,12 @@ export async function runSync(
           localMatch.payload.local_updated_at > remotePayload.local_updated_at
         ) {
           // Local is newer — keep it, count as a conflict (resolved locally).
-          metrics.conflicts++;
           metrics.resolved++;
+          metrics.conflicts.push({
+            photo_id: p.id,
+            winner: 'local',
+            fields_changed: [],
+          });
           onProgress?.(
             `Kept local copy of ${p.id.slice(0, 8)}… (local newer than remote)`,
           );

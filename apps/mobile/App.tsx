@@ -1,13 +1,20 @@
 /**
  * FieldEdge — main app entry.
  *
- * 3-pane layout (top to bottom):
- *   1. Header (Rust version, project, sync status)
- *   2. SearchScreen (text input + result grid)
- *   3. Capture button + Sync button
+ * Screens:
+ *   search          Home with SearchScreen + Capture + Sync buttons
+ *   capture         CaptureScreen full-screen
+ *   report          SyncReportScreen (last sync result)
+ *   onboarding      First-launch welcome
+ *   settings        SettingsScreen (gear icon)
+ *   album           AlbumScreen (date-grouped grid)
+ *   map             MapScreen (GPS pin overlay)
+ *   photo-preview   PhotoPreviewScreen (full-size image + metadata)
+ *   conflict-detail ConflictDetailScreen (per-photo audit trail)
  *
- * Tapping Capture opens CaptureScreen full-screen. After a successful
- * capture, returns here and the search grid updates.
+ * PhotoPreviewScreen is the shared destination for Search/Album/Map taps.
+ * ConflictDetailScreen is reached from the SyncReportScreen's conflict
+ * rows; it carries its own photoId from the conflict entry, not from App.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -21,8 +28,10 @@ import {
   Text,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fieldEdge } from './src/native/fieldEdge';
 import { useSyncStore } from './src/stores/syncStore';
+import { useSettingsStore } from './src/stores/settingsStore';
 import { SyncMetrics } from './src/services/sync';
 import { apiClient } from './src/services/api';
 import { FIELD_SHARD_DIR, getDeviceToken } from './src/config';
@@ -30,16 +39,34 @@ import { warmUpClip } from './src/embedding/clip';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { CaptureScreen } from './src/screens/CaptureScreen';
 import { SyncReportScreen } from './src/screens/SyncReportScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { AlbumScreen } from './src/screens/AlbumScreen';
+import { MapScreen } from './src/screens/MapScreen';
+import { PhotoPreviewScreen } from './src/screens/PhotoPreviewScreen';
+import { ConflictDetailScreen } from './src/screens/ConflictDetailScreen';
 
-type Screen = 'home' | 'capture' | 'report';
+type Screen =
+  | 'search'
+  | 'capture'
+  | 'report'
+  | 'onboarding'
+  | 'settings'
+  | 'album'
+  | 'map'
+  | 'photo-preview'
+  | 'conflict-detail';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>('search');
+  const [bootReady, setBootReady] = useState(false);
   const [shardStatus, setShardStatus] = useState('Not initialized');
   const [pointCount, setPointCount] = useState(0);
   const [version, setVersion] = useState<{ status: string; value?: { crate: string; version: string; rust_version: string; features: Record<string, boolean> } } | null>(null);
   const [syncReport, setSyncReport] = useState<SyncMetrics | null>(null);
+  const [currentPhotoId, setCurrentPhotoId] = useState<string>('');
   const { status, lastReport, triggerSync, setPendingCount } = useSyncStore();
+  const resetSettings = useSettingsStore((s) => s.reset);
 
   useEffect(() => {
     initialize();
@@ -47,12 +74,9 @@ export default function App() {
 
   const initialize = async () => {
     try {
-      // Initialize device identity + Bearer token before anything hits the API.
       const token = await getDeviceToken();
       apiClient.setToken(token);
 
-      // FR-013 — warm up the CLIP ONNX sessions so the first capture is fast.
-      // Fire-and-forget; failure is non-fatal (degraded mode kicks in).
       warmUpClip().catch(() => {});
 
       const ver = await fieldEdge.version();
@@ -71,11 +95,38 @@ export default function App() {
     } catch (err) {
       Alert.alert('Init failed', String(err));
       setShardStatus('❌ Failed');
+    } finally {
+      setBootReady(true);
     }
   };
 
+  useEffect(() => {
+    if (!bootReady) return;
+    let cancelled = false;
+    const check = () => {
+      if (cancelled) return;
+      const hydrated = useSettingsStore.persist.hasHydrated();
+      if (!hydrated) {
+        setTimeout(check, 50);
+        return;
+      }
+      if (!useSettingsStore.getState().hasOnboarded && screen === 'search') {
+        setScreen('onboarding');
+      }
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootReady, screen]);
+
+  const openPhoto = (photoId: string) => {
+    setCurrentPhotoId(photoId);
+    setScreen('photo-preview');
+  };
+
   const onCaptured = async (photoId: string) => {
-    setScreen('home');
+    setScreen('search');
     Alert.alert(
       'Captured',
       `Photo ${photoId.slice(0, 8)}… saved offline. Tap Sync to push to cloud.`,
@@ -88,11 +139,9 @@ export default function App() {
   const runSyncFlow = async () => {
     try {
       const report = await triggerSync();
-      // Always show the report — even on errors — so the user sees what happened.
       setSyncReport(report ?? lastReport);
       setScreen('report');
     } catch (err) {
-      // Store-level error (only if runSync itself throws; it now catches internally).
       Alert.alert('Sync failed', String(err));
     }
   };
@@ -101,7 +150,7 @@ export default function App() {
     return (
       <CaptureScreen
         onCaptured={onCaptured}
-        onCancel={() => setScreen('home')}
+        onCancel={() => setScreen('search')}
       />
     );
   }
@@ -112,9 +161,71 @@ export default function App() {
         <StatusBar barStyle="light-content" />
         <SyncReportScreen
           report={syncReport}
-          onClose={() => setScreen('home')}
+          onClose={() => setScreen('search')}
         />
       </SafeAreaView>
+    );
+  }
+
+  if (screen === 'onboarding') {
+    return (
+      <OnboardingScreen onDone={() => setScreen('search')} />
+    );
+  }
+
+  if (screen === 'settings') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <SettingsScreen
+          onClose={() => setScreen('search')}
+          onLogout={() => {
+            apiClient.setToken('');
+            AsyncStorage.multiRemove([
+              '@fieldedge/device_id',
+              '@fieldedge/device_token',
+            ]).catch(() => {});
+            resetSettings();
+            setScreen('onboarding');
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === 'album') {
+    return (
+      <AlbumScreen
+        onBack={() => setScreen('search')}
+        onPhotoPress={openPhoto}
+      />
+    );
+  }
+
+  if (screen === 'map') {
+    return (
+      <MapScreen
+        onBack={() => setScreen('search')}
+        onOpenPhoto={openPhoto}
+      />
+    );
+  }
+
+  if (screen === 'photo-preview') {
+    return (
+      <PhotoPreviewScreen
+        photoId={currentPhotoId}
+        onClose={() => setScreen('search')}
+      />
+    );
+  }
+
+  if (screen === 'conflict-detail') {
+    return (
+      <ConflictDetailScreen
+        photoId={currentPhotoId}
+        onClose={() => setScreen('search')}
+      />
     );
   }
 
@@ -123,7 +234,16 @@ export default function App() {
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <Text style={styles.title}>FieldEdge</Text>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.title}>FieldEdge</Text>
+            <Pressable
+              onPress={() => setScreen('settings')}
+              style={styles.gearBtn}
+              hitSlop={12}
+            >
+              <Text style={styles.gearIcon}>⚙️</Text>
+            </Pressable>
+          </View>
           <Text style={styles.subtitle}>
             Offline-first AI · {pointCount} photos
           </Text>
@@ -145,7 +265,11 @@ export default function App() {
           </View>
         </View>
 
-        <SearchScreen onPhotoPress={(hit) => console.log('open', hit.id)} />
+        <SearchScreen
+          onPhotoPress={openPhoto}
+          activeTab="search"
+          onTabChange={(tab) => setScreen(tab)}
+        />
 
         <View style={styles.actionRow}>
           <Pressable
@@ -178,6 +302,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0E1116' },
   scroll: { paddingBottom: 48 },
   header: { padding: 24, paddingTop: 16 },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gearBtn: { padding: 8 },
+  gearIcon: { fontSize: 22 },
   title: {
     fontSize: 32,
     fontWeight: 'bold',

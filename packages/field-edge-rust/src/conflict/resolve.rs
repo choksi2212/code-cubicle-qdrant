@@ -123,7 +123,7 @@ mod tests {
 
     fn make_payload(id: &str, ts: &str, project: &str) -> Payload {
         Payload {
-            schema_version: 1,
+            schema_version: 2,
             photo_id: id.into(),
             device_id: "dev".into(),
             captured_at: "2025-05-12T14:23:01Z".into(),
@@ -140,6 +140,9 @@ mod tests {
             synced_at: None,
             local_updated_at: ts.into(),
             vector_checksum: "sha256:abc".into(),
+            deletion_marker: false,
+            project_owner: None,
+            tags_v2: vec![],
         }
     }
 

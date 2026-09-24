@@ -4,16 +4,25 @@
 //! payload filters, and persistent snapshot. Suitable for ≤10k vectors
 //! (our hackathon scale).
 //!
+//! Two on-disk formats are available:
+//!   * Plaintext (default): `edge_snapshot.bin` written with bincode.
+//!   * Encrypted:           AES-256-GCM-sealed, written by
+//!     [`EncryptedInMemoryEdge`]. Vectors are encrypted too — they
+//!     could leak photo content via nearest-neighbor reconstruction.
+//!
 //! See `qdrant_edge_notes.md` for the qdrant-edge v0.8.0 API gap analysis
 //! and the planned swap.
 
 use crate::crypto::checksum::vector_checksum;
 use crate::models::payload::{Payload, CURRENT_SCHEMA_VERSION};
+use crate::storage::encryption::{Cipher, NONCE_LEN, TAG_LEN};
+use crate::storage::keyring::KeyRing;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use thiserror::Error;
 
 const VECTOR_DIM: usize = 512;
@@ -155,6 +164,39 @@ impl InMemoryEdge {
         fs::rename(&tmp_path, &self.snapshot_path)
             .map_err(|e| EdgeError::Io(e.to_string()))?;
         Ok(())
+    }
+
+    /// Internal helper used by [`EncryptedInMemoryEdge`] — clone the
+    /// current in-memory state for re-serialization through a cipher.
+    pub(crate) fn snapshot_clone(&self) -> HashMap<String, StoredPoint> {
+        self.points.read().clone()
+    }
+
+    /// Internal helper used by [`EncryptedInMemoryEdge`] — build an
+    /// instance with a pre-populated points map pointing at a custom
+    /// snapshot path (so the encrypted wrapper can route persistence
+    /// through its own cipher).
+    pub(crate) fn with_state(
+        directory: &str,
+        points: HashMap<String, StoredPoint>,
+        snapshot_path: std::path::PathBuf,
+    ) -> Result<Self, EdgeError> {
+        let path = Path::new(directory);
+        if !path.exists() {
+            fs::create_dir_all(path).map_err(|e| EdgeError::Io(e.to_string()))?;
+        }
+        // Address-based unique ID — same scheme as the public ctor so
+        // concurrent instances don't trample each other's tmp files.
+        let instance_id = {
+            let p = &points as *const _ as usize;
+            p as u64
+        };
+        Ok(Self {
+            points: RwLock::new(points),
+            snapshot_path,
+            persist_lock: parking_lot::Mutex::new(()),
+            instance_id,
+        })
     }
 
     fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
@@ -300,6 +342,135 @@ impl EdgeOps for InMemoryEdge {
     }
 }
 
+// ─── Encrypted in-memory shard ───────────────────────────────────────────────
+//
+// Wraps an [`InMemoryEdge`]-equivalent store but persists a bincode
+// snapshot through an [`Cipher`]. Both the points hashmap AND the
+// underlying vectors are inside that snapshot, so encrypting the bytes
+// once is sufficient — the bincode stream is opaque from outside.
+//
+// AAD used for the snapshot = `b"fieldedge/shard/v1"` (binds the cipher
+// to its semantic context; a snapshot can't be replayed against the WAL).
+
+/// AAD for the encrypted shard snapshot.
+pub const SHARD_AAD: &[u8] = b"fieldedge/shard/v1";
+/// Snapshot filename for the encrypted variant (kept distinct from
+/// plaintext so the two never co-exist on disk).
+pub const ENCRYPTED_SNAPSHOT_FILE: &str = "edge_snapshot.enc";
+
+#[derive(Debug, Error)]
+pub enum EncryptedShardError {
+    #[error("io: {0}")]
+    Io(String),
+    #[error("bincode: {0}")]
+    Bincode(String),
+    #[error("encryption: {0}")]
+    Crypto(String),
+}
+
+/// Encrypted shard — same `EdgeOps` API as [`InMemoryEdge`], but the
+/// on-disk snapshot is AES-256-GCM-sealed with AAD = SHARD_AAD.
+pub struct EncryptedInMemoryEdge {
+    inner: InMemoryEdge,
+    cipher: Arc<dyn Cipher>,
+    snapshot_path: std::path::PathBuf,
+}
+
+impl EncryptedInMemoryEdge {
+    /// Open or create an encrypted shard under `directory`.
+    pub fn new(directory: &str, keyring: &KeyRing) -> Result<Self, EdgeError> {
+        Self::new_with_cipher(directory, Arc::new(keyring.cipher().clone()))
+    }
+
+    /// Open with an arbitrary cipher (tests / custom key material).
+    pub fn new_with_cipher(directory: &str, cipher: Arc<dyn Cipher>) -> Result<Self, EdgeError> {
+        let path = Path::new(directory);
+        if !path.exists() {
+            fs::create_dir_all(path).map_err(|e| EdgeError::Io(e.to_string()))?;
+        }
+        let snapshot_path = path.join(ENCRYPTED_SNAPSHOT_FILE);
+
+        // Decrypt the existing snapshot if it exists; otherwise seed
+        // with an empty store. We don't delegate to InMemoryEdge's own
+        // constructor because that one points at a plaintext file.
+        let mut points = HashMap::new();
+        if snapshot_path.exists() {
+            match Self::read_snapshot(&snapshot_path, cipher.as_ref()) {
+                Ok(loaded) => points = loaded,
+                Err(e) => tracing::warn!("encrypted snapshot read failed, starting fresh: {}", e),
+            }
+        }
+
+        // Hand-build an InMemoryEdge instance with the populated points
+        // but pointing at the encrypted snapshot path. We replicate its
+        // fields because there's no public constructor that takes both.
+        let inner = InMemoryEdge::with_state(directory, points, snapshot_path.clone())?;
+
+        Ok(Self {
+            inner,
+            cipher,
+            snapshot_path,
+        })
+    }
+
+    fn read_snapshot(
+        path: &Path,
+        cipher: &dyn Cipher,
+    ) -> Result<HashMap<String, StoredPoint>, EncryptedShardError> {
+        let bytes = fs::read(path).map_err(|e| EncryptedShardError::Io(e.to_string()))?;
+        if bytes.len() < NONCE_LEN + TAG_LEN {
+            return Err(EncryptedShardError::Io(format!(
+                "snapshot too short ({} bytes)",
+                bytes.len()
+            )));
+        }
+        let plaintext = cipher
+            .decrypt(&bytes, SHARD_AAD)
+            .map_err(|e| EncryptedShardError::Crypto(e.to_string()))?;
+        bincode::deserialize::<HashMap<String, StoredPoint>>(&plaintext)
+            .map_err(|e| EncryptedShardError::Bincode(e.to_string()))
+    }
+
+    fn persist(&self) -> Result<(), EdgeError> {
+        let snapshot = self.inner.snapshot_clone();
+        let plaintext = bincode::serialize(&snapshot).map_err(|e| EdgeError::Other(e.to_string()))?;
+        let ciphertext = self.cipher.encrypt(&plaintext, SHARD_AAD);
+        // Atomic write via tempfile + rename to avoid corruption on crash.
+        let mut tmp_name = self.snapshot_path.file_name().unwrap().to_owned();
+        tmp_name.push(".tmp");
+        let tmp_path = self.snapshot_path.with_file_name(tmp_name);
+        fs::write(&tmp_path, ciphertext).map_err(|e| EdgeError::Io(e.to_string()))?;
+        fs::rename(&tmp_path, &self.snapshot_path).map_err(|e| EdgeError::Io(e.to_string()))?;
+        Ok(())
+    }
+}
+
+impl EdgeOps for EncryptedInMemoryEdge {
+    fn upsert(&self, points: &[Point]) -> Result<(), EdgeError> {
+        self.inner.upsert(points)?;
+        self.persist()
+    }
+    fn query(&self, req: &QueryRequest) -> Result<Vec<ScoredPoint>, EdgeError> {
+        self.inner.query(req)
+    }
+    fn retrieve(&self, ids: &[String]) -> Result<Vec<Point>, EdgeError> {
+        self.inner.retrieve(ids)
+    }
+    fn delete(&self, ids: &[String]) -> Result<(), EdgeError> {
+        self.inner.delete(ids)?;
+        self.persist()
+    }
+    fn optimize(&self) -> Result<(), EdgeError> {
+        self.inner.optimize()
+    }
+    fn close(&self) -> Result<(), EdgeError> {
+        self.persist()
+    }
+    fn len(&self) -> Result<usize, EdgeError> {
+        self.inner.len()
+    }
+}
+
 fn format_f64(f: f64) -> String {
     // For ISO-8601 timestamp comparison; we want stable string form
     // The f64 here is interpreted as the timestamp in milliseconds-since-epoch.
@@ -357,6 +528,9 @@ mod tests {
             synced_at: None,
             local_updated_at: "2025-05-12T14:23:01Z".into(),
             vector_checksum: vector_checksum(&vec![0.1; 512]),
+            deletion_marker: false,
+            project_owner: None,
+            tags_v2: vec![],
         }
     }
 

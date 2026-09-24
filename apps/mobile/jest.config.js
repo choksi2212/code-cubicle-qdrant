@@ -9,7 +9,7 @@
 
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/__tests__/**/*.test.ts'],
+  testMatch: ['<rootDir>/__tests__/**/*.test.ts', '<rootDir>/__tests__/**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
     '^.+\\.tsx?$': ['babel-jest', { configFile: './babel.config.js' }],
@@ -19,8 +19,12 @@ module.exports = {
   ],
   // Tests mock RNFS, fieldEdge, location, clip, config explicitly — the
   // bare `react-native` import in capture.ts should still resolve to a
-  // shim so the SyntaxError above doesn't fire.
+  // shim so the SyntaxError above doesn't fire. AsyncStorage is mocked
+  // per-test (settingsStore.test.ts stubs an in-memory map) because the
+  // package's bundled jest mock requires the jsdom env which we don't
+  // pull in here.
   moduleNameMapper: {
     '^react-native$': '<rootDir>/__mocks__/react-native.js',
   },
+  testEnvironment: 'node',
 };

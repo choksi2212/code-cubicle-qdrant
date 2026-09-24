@@ -29,7 +29,7 @@ fn make_payload(device: &str, ts: &str, project: &str, vec_hash: &str) -> Payloa
         .collect();
     let checksum = format!("sha256:{}:{}", device, vec_hash);
     Payload {
-        schema_version: 1,
+        schema_version: 2,
         photo_id: "p1".into(),
         device_id: device.into(),
         captured_at: ts.into(),
@@ -46,6 +46,9 @@ fn make_payload(device: &str, ts: &str, project: &str, vec_hash: &str) -> Payloa
         synced_at: None,
         local_updated_at: ts.into(),
         vector_checksum: checksum,
+        deletion_marker: false,
+        project_owner: None,
+        tags_v2: vec![],
     }
 }
 

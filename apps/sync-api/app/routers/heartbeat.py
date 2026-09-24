@@ -2,8 +2,9 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.auth import AuthContext, require_auth
 from app.config import settings
 from app.models import HeartbeatResponse
 from app.services import qdrant
@@ -12,8 +13,14 @@ router = APIRouter()
 
 
 @router.get("/heartbeat", response_model=HeartbeatResponse)
-async def heartbeat():
-    """Liveness probe with cluster health."""
+async def heartbeat(_ctx: AuthContext = Depends(require_auth)):
+    """Liveness probe with cluster health.
+
+    Auth-required (any valid access token). We accept the dependency so
+    the OpenAPI doc reflects that an enterprise must be signed in to
+    monitor the cluster; the device_id from the token is logged but not
+    used in the response.
+    """
     server_time = datetime.now(timezone.utc)
 
     try:

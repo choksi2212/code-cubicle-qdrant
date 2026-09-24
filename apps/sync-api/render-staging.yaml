@@ -1,0 +1,48 @@
+# Render Blueprint — FieldEdge sync API (staging)
+#
+# Deploy: https://dashboard.render.com → New → Blueprint → point at this repo
+#          → select this file (apps/sync-api/render-staging.yaml).
+# Or via CLI:
+#   render blueprint launch --path apps/sync-api/render-staging.yaml
+#
+# Staging runs an isolated copy of the sync API so PRs / feature branches can
+# be exercised end-to-end without touching production data. Set
+# QDRANT_URL / QDRANT_API_KEY to a *separate* Qdrant cluster (the staging
+# collection name follows QDRANT_COLLECTION below).
+
+services:
+  - type: web
+    name: field-edge-sync-api-staging
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    rootDir: apps/sync-api
+    plan: free
+    region: oregon
+    # Lightweight liveness — fails fast if the process is wedged.
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+
+      # Environment flag — consumed by app code to switch behaviour
+      - key: ENV
+        value: staging
+      - key: LOG_LEVEL
+        value: debug
+
+      # Qdrant (staging cluster — must be separate from prod)
+      - key: QDRANT_COLLECTION
+        value: field_edge_staging
+
+      # Secrets — set these in the Render dashboard before first deploy.
+      # Do NOT commit values to git.
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

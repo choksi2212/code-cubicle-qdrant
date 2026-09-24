@@ -1,0 +1,132 @@
+name: ci
+
+on:
+  push:
+    branches: [development, main]
+  pull_request:
+    branches: [development, main]
+
+# Cancel an in-flight run for the same ref when a new commit is pushed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── JS / TS workspace ────────────────────────────────────────────────
+  # Scoped to apps/* and packages/* via --filter to avoid running the
+  # root package's `lint`/`test` scripts (which themselves shell out to
+  # `pnpm -r ...` and would otherwise recurse).
+  js:
+    name: lint + typecheck + test (JS/TS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        # mobile + react-native packages expose `lint` (eslint).
+        run: pnpm -r --if-present --filter './apps/*' --filter './packages/*' lint
+
+      - name: Typecheck
+        # packages expose `tsc` (not `typecheck`) — closest match.
+        run: pnpm -r --if-present --filter './apps/*' --filter './packages/*' tsc
+
+      - name: Test (Jest)
+        run: pnpm -r --if-present --filter './apps/*' --filter './packages/*' test
+
+  # ── Rust workspace ───────────────────────────────────────────────────
+  rust:
+    name: test (Rust)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust 1.79
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.79
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/field-edge-rust -> target
+
+      - name: Test
+        run: cargo test --workspace --manifest-path packages/field-edge-rust/Cargo.toml
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --workspace --manifest-path packages/field-edge-rust/Cargo.toml --all-targets -- -D warnings
+
+  # ── Mobile APK build ─────────────────────────────────────────────────
+  # Only on push to development/main, NOT on PRs — too slow (~10 min) for
+  # a reviewer waiting on every change. PRs get the JS+rust gates above.
+  mobile-apk:
+    name: build android APK (release)
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Java 17 (Android Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Bundle JS for Android
+        working-directory: apps/mobile
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Assemble release APK
+        # NOTE: the JS-only APK is built here. Native Rust cross-compile
+        # (cargo ndk) is intentionally skipped — it requires the Android
+        # NDK + Rust targets which live in the local scripts/ folder.
+        # See docs/07-CI-CD.md for the full native build flow.
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ github.ref_name }}
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: warn
+          retention-days: 14

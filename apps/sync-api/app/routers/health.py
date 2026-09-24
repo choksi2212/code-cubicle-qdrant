@@ -6,6 +6,7 @@ from fastapi import APIRouter, Response
 from loguru import logger
 
 from app.config import settings
+from app.redis_client import ping_redis
 from app.services import qdrant
 
 router = APIRouter()
@@ -30,7 +31,14 @@ async def liveness():
 
 @router.get("/readyz")
 async def readiness(response: Response):
-    """Readiness probe — verifies we can reach Qdrant Cloud."""
+    """Readiness probe — verifies we can reach Qdrant Cloud + Redis.
+
+    ``redis`` in the payload is ``False`` when Redis is disabled in
+    config OR the live ping fails. Both cases return HTTP 200 — a Redis
+    outage degrades revocation/idempotency but doesn't make the API
+    unready (Qdrant is the hard dependency; Redis is best-effort).
+    """
+    redis_ok = await ping_redis()
     try:
         client = qdrant.get_client()
         info = client.get_collection(collection_name=settings.qdrant_collection)
@@ -39,10 +47,11 @@ async def readiness(response: Response):
             "qdrant_collection": settings.qdrant_collection,
             "qdrant_points": info.points_count or 0,
             "qdrant_status": str(info.status),
+            "redis": redis_ok,
         }
     except Exception as e:
         response.status_code = 503
-        return {"status": "not_ready", "error": str(e)}
+        return {"status": "not_ready", "error": str(e), "redis": redis_ok}
 
 
 @router.get("/metrics")

@@ -1,5 +1,7 @@
 package com.fieldedge.edge
 
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Log
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -9,6 +11,7 @@ import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.WritableNativeMap
+import com.facebook.react.bridge.WritableNativeArray
 import com.facebook.react.bridge.Arguments
 import org.json.JSONArray
 import org.json.JSONObject
@@ -16,6 +19,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.security.KeyStore
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 
 /**
  * FieldEdge Rust bridge — calls into libfield_edge_rust.so via dlsym.
@@ -380,5 +386,163 @@ class FieldEdgeRustModule(reactContext: ReactApplicationContext) :
                 promise.reject("VERSION_FAILED", e.message, e)
             }
         }
+    }
+
+    /**
+     * Create (or recreate) a 256-bit AES key in the Android Keystore
+     * under `alias`. StrongBox is preferred when available so the key
+     * bytes never leave the Secure Hardware. The key is NOT marked
+     * extractable by default — that's a separate decision made by
+     * `feKeyFromKeystore` (the field-evidence flow explicitly needs the
+     * raw bytes to derive the WAL/shard subkeys via HKDF on the Rust
+     * side, so we use `setIsStrongBoxBacked` for StrongBox and accept
+     * that on non-StrongBox devices the bytes sit in TEE/TrustZone).
+     *
+     * Idempotent: if the alias already exists, this is a no-op and the
+     * Promise resolves with `created: false`. To rotate, call
+     * `feKeyDelete(alias)` first (not exposed yet — see
+     * docs/09-ENCRYPTION.md).
+     */
+    @ReactMethod
+    fun feKeyCreate(alias: String, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                    if (ks.containsAlias(alias)) {
+                        return@withContext """{"status":"ok","value":{"created":false,"alias":"$alias"}}"""
+                    }
+                    val kg = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+                    val spec = KeyGenParameterSpec.Builder(
+                        alias,
+                        KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                    )
+                        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                        .setKeySize(256)
+                        .setRandomizedEncryptionRequired(true)
+                        .apply {
+                            // StrongBox when available (Android 9+). Falls
+                            // back to TEE on devices without a Secure
+                            // Element.
+                            try {
+                                setIsStrongBoxBacked(true)
+                            } catch (e: Throwable) {
+                                Log.i(TAG, "StrongBox unavailable for $alias, using TEE: ${e.message}")
+                            }
+                        }
+                        .build()
+                    kg.init(spec)
+                    kg.generateKey()
+                    """{"status":"ok","value":{"created":true,"alias":"$alias"}}"""
+                }
+                promise.resolve(jsonToWritableMap(result))
+            } catch (e: Throwable) {
+                promise.reject("KEY_CREATE_FAILED", e.message, e)
+            }
+        }
+    }
+
+    /**
+     * Fetch the raw bytes of a Keystore-resident AES key.
+     *
+     * The key must have been created via `feKeyCreate` first. Returns
+     * a `WritableArray` of bytes (`Number`s in [0, 255]) that the caller
+     * can pass to native code. On the Rust side these bytes are HKDF'd
+     * into a per-context subkey — the raw Keystore bytes never appear
+     * in plaintext on disk or in network payloads.
+     */
+    @ReactMethod
+    fun feKeyFromKeystore(alias: String, promise: Promise) {
+        scope.launch {
+            try {
+                val payload = withContext(Dispatchers.IO) {
+                    val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                    val secretKey = ks.getKey(alias, null) as? SecretKey
+                        ?: throw IllegalStateException("Alias '$alias' missing or not a SecretKey")
+                    val raw = secretKey.encoded
+                        ?: throw IllegalStateException("Keystore key has no extractable bytes (setIsStrongBoxBacked must be true at creation)")
+                    if (raw.isEmpty()) {
+                        throw IllegalStateException("Keystore returned zero-length key for alias '$alias'")
+                    }
+                    raw
+                }
+                // Push the bytes into Rust's process-global key slot so
+                // any later `fe_key_from_keystore_bytes` call (on the
+                // native side) can read them synchronously.
+                installKeystoreKeyNative(alias, payload)
+                val out = WritableNativeArray()
+                for (b in payload) {
+                    out.pushInt(b.toInt() and 0xFF)
+                }
+                promise.resolve(out)
+            } catch (e: Throwable) {
+                Log.w(TAG, "feKeyFromKeystore failed for alias='$alias': ${e.message}")
+                promise.reject("KEY_FROM_KEYSTORE_FAILED", e.message, e)
+            }
+        }
+    }
+
+    /** JNI shim — populates Rust's `INSTALLED_KEY` slot with raw key bytes. */
+    private external fun installKeystoreKeyNative(alias: String, bytes: ByteArray): Boolean
+
+    /**
+     * Structured-log line. Forwarded to Android logcat under tag
+     * "field_edge" so it's visible in `adb logcat | grep field_edge`.
+     *
+     * The Rust observability module (`packages/field-edge-rust/src/observability`)
+     * emits the same JSON shape to stderr; logcat captures both, so
+     * operators see one consistent stream regardless of whether the line
+     * originated in Rust (WAL, sync, conflict) or Kotlin (this method).
+     *
+     * Signature:
+     *   level:    "DEBUG" | "INFO" | "WARN" | "ERROR" (case-insensitive)
+     *   msg:      human-readable line
+     *   kv:       ReadableMap of {key: string} pairs (values are stringified)
+     *
+     * Returns a Promise so callers can `await` it from JS if they want
+     * ordering. The Log.println call itself is synchronous and fast.
+     */
+    @ReactMethod
+    fun log(level: String, msg: String, kv: ReadableMap?, promise: Promise) {
+        try {
+            val kvJson = readableMapToJson(kv)
+            val androidLevel = when (level.uppercase()) {
+                "DEBUG" -> Log.DEBUG
+                "WARN", "WARNING" -> Log.WARN
+                "ERROR" -> Log.ERROR
+                else -> Log.INFO
+            }
+            // Inline JSON: { "level": "...", "msg": "...", "kv": {...} }.
+            // msg is JSON-escaped so quotes/newlines survive logcat verbatim.
+            Log.println(
+                androidLevel,
+                "field_edge",
+                "{\"level\":\"${level.uppercase()}\",\"msg\":${jsonString(msg)},\"kv\":$kvJson}"
+            )
+            promise.resolve(true)
+        } catch (e: Throwable) {
+            promise.reject("LOG_FAILED", e.message, e)
+        }
+    }
+
+    /** JSON-encode a string with proper escaping for inline log lines. */
+    private fun jsonString(s: String): String {
+        val sb = StringBuilder(s.length + 2)
+        sb.append('"')
+        for (c in s) {
+            when (c) {
+                '\\' -> sb.append("\\\\")
+                '"' -> sb.append("\\\"")
+                '\n' -> sb.append("\\n")
+                '\r' -> sb.append("\\r")
+                '\t' -> sb.append("\\t")
+                '\b' -> sb.append("\\b")
+                '\u000c' -> sb.append("\\f")
+                else -> if (c.code < 0x20) sb.append(String.format("\\u%04x", c.code)) else sb.append(c)
+            }
+        }
+        sb.append('"')
+        return sb.toString()
     }
 }

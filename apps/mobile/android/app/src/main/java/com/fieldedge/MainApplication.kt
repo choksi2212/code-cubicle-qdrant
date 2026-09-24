@@ -10,6 +10,7 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.fieldedge.edge.FieldEdgePackage
+import com.fieldedge.edge.SyncSchedulerPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -17,8 +18,12 @@ class MainApplication : Application(), ReactApplication {
         object : DefaultReactNativeHost(this) {
             override fun getPackages(): List<ReactPackage> {
                 val packages = PackageList(this).packages
-                // Add our custom native module
+                // FieldEdgePackage owns SecureStoreModule (auth JWT) +
+                // FieldEdgeRust + OnnxClip modules.
                 packages.add(FieldEdgePackage())
+                // SyncSchedulerPackage owns SyncSchedulerModule +
+                // SyncWorker (WorkManager-based background sync).
+                packages.add(SyncSchedulerPackage())
                 return packages
             }
 

@@ -1,0 +1,983 @@
+openapi: 3.1.0
+info:
+  title: FieldEdge Sync API
+  version: 0.1.0
+  description: "Orchestrator between FieldEdge mobile devices and the central Qdrant
+cluster. Authentication uses HS256 JWTs issued by `/auth/login` and
+refreshed via `/auth/refresh`. All `/sync/*` endpoints require an
+`Authorization: Bearer <access_token>` header carrying a token whose `type` claim is `access` (15-minute TTL). See docs/08-AUTH.md for the planned OIDC swap.
+"
+  contact:
+    name: FieldEdge Hackathon Team
+    url: https://github.com/choksi2212/field-edge
+  license:
+    name: Proprietary
+servers:
+- url: http://localhost:8000
+  description: Local development
+- url: https://field-edge-sync-api.onrender.com
+  description: Production (Render)
+tags:
+- name: auth
+  description: JWT login + refresh + me
+- name: sync
+  description: Batch upload, pull, and WAL replay
+- name: conflicts
+  description: Per-photo conflict audit (which payload won, which fields changed)
+- name: heartbeat
+  description: Server liveness with Qdrant reachability
+- name: health
+  description: Kubernetes-style probes
+paths:
+  /auth/login:
+    post:
+      tags:
+      - auth
+      summary: Exchange device credentials for a JWT pair
+      description: 'Mints a short-lived access token (15-minute TTL) and a
+        long-lived refresh token (7-day TTL). Both are HS256-signed JWTs
+        whose `sub` claim is the supplied `device_id`. Today the only
+        requirement is a non-empty `device_id` and an 8+-character
+        `device_token` -- see docs/08-AUTH.md for the planned OIDC swap.
+
+        '
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token pair minted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Missing or short device_token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /auth/refresh:
+    post:
+      tags:
+      - auth
+      summary: Trade a refresh token for a new pair
+      description: 'Rotates the refresh token (new `jti`) and issues a fresh
+        access token. The OLD refresh token''s `jti` is written to a
+        Redis-backed revocation list with TTL = remaining lifetime, so
+        any subsequent decode rejects it with 401 "Token revoked".
+        Falls back to no-revocation when Redis is disabled/unreachable
+        — see docs/12-REDIS.md.
+
+        '
+      operationId: refresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New token pair.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Revoke the current access token (and optionally its refresh token)
+      description: 'One-call "log me out everywhere this token is used".
+        Always revokes the access token that authenticated the call;
+        if the request body carries a `refresh_token`, that one is
+        also revoked. Both revocations persist to Redis with TTL =
+        remaining token lifetime. Idempotent — calling logout twice is
+        a no-op. Falls back to a no-op when Redis is down.
+
+        '
+      operationId: logout
+      security:
+      - DeviceBearer: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logged out.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/me:
+    get:
+      tags:
+      - auth
+      summary: Echo the authenticated device and access-token expiry
+      description: 'A lightweight bearer probe -- clients can hit this on app
+        foreground to decide whether to silently refresh.
+
+        '
+      operationId: me
+      security:
+      - DeviceBearer: []
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /sync/upload:
+    post:
+      tags:
+      - sync
+      summary: Upload a batch of points from a device
+      description: 'Accepts a batch of points from a device and writes them to the
+
+        central Qdrant collection. Each point is upserted by id; if the
+
+        server already has a point with the same id and the same
+
+        `vector_checksum` the result is idempotent (`accepted`). A
+
+        differing checksum triggers conflict resolution by timestamp:
+
+        if the local `local_updated_at` is older than the remote copy
+
+        the point is `rejected_too_old`; otherwise the local payload
+
+        wins (`conflict_resolved`, `local_wins`).
+
+        The request body''s canonical SHA-256 is used as a Redis cache
+        key: a repeated POST of the same body within 24h returns the
+        cached response with `already_received=true` instead of
+        re-running the conflict loop. When Redis is unreachable the
+        cache check degrades gracefully — see docs/12-REDIS.md.
+
+        '
+      operationId: uploadPoints
+      security:
+      - DeviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+      responses:
+        '200':
+          description: Batch processed. Check per-point status. When `already_received` is `true`, the body was a duplicate accepted in the last 24h and `results` is empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdempotentUploadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Batch too large (max 100 points)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sync/pull:
+    get:
+      tags:
+      - sync
+      summary: Pull updates from the central cluster
+      description: "Returns points updated after the given cursor, excluding writes\nmade by the calling device. The cursor\
+        \ is opaque (base64 JSON\n`{server_time, last_id}`) \xE2\u20AC\u201D clients must echo back the\n`next_cursor` they\
+        \ receive.\n"
+      operationId: pullUpdates
+      security:
+      - DeviceBearer: []
+      parameters:
+      - name: since
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Opaque cursor returned by a previous pull/upload.
+        example: eyJzZXJ2ZXJfdGltZSI6ICIyMDI2LTA5LTI0VDAxOjAwOjAwKzAwOjAwIiwgImxhc3RfaWQiOiAiYWJjMTIzIn0=
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 100
+          maximum: 500
+          minimum: 1
+      responses:
+        '200':
+          description: Cursor-scoped slice of remote points.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sync/heartbeat:
+    get:
+      tags:
+      - heartbeat
+      summary: Liveness probe with Qdrant reachability
+      description: 'No auth required. Returns `ok` with point count when Qdrant is
+
+        reachable; `degraded` when the cluster is unreachable.
+
+        '
+      operationId: heartbeat
+      responses:
+        '200':
+          description: Heartbeat response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatResponse'
+  /sync/wal/replay:
+    post:
+      tags:
+      - sync
+      summary: Replay a previously-uploaded batch after a crash (FR-080)
+      description: 'Used when the device believes a `POST /sync/upload` succeeded
+
+        but never received a response (network dropped mid-flight). The
+
+        device re-sends the same `batch_id` + points; the server
+
+        upserts idempotently by point id and returns the per-point
+
+        result.
+
+        '
+      operationId: walReplay
+      security:
+      - DeviceBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalReplayRequest'
+      responses:
+        '200':
+          description: Replay processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Batch too large (max 100 points)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /sync/conflicts/{photo_id}:
+    get:
+      tags:
+      - conflicts
+      summary: Audit record for a single photo's last conflict resolution
+      description: "Returns the local + remote payloads as they stood at the moment\nof the last conflict resolution, the winner, and which top-level\nfields changed. Used by the mobile ConflictDetailScreen to show\n\"your photo was replaced by a newer version from your colleague's\ntablet\" and let the user see both copies side-by-side. The `local`\npayload is read from a `_local_snapshot` field that the upload router\nwrites on every upload. Returns 404 if the photo_id is unknown.\n"
+      operationId: getConflict
+      security:
+      - DeviceBearer: []
+      parameters:
+      - name: photo_id
+        in: path
+        required: true
+        schema:
+          type: string
+          description: UUID of the photo to look up.
+      responses:
+        '200':
+          description: Conflict audit record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: photo_id not found in the central cluster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Qdrant unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /healthz:
+    get:
+      tags:
+      - health
+      summary: Liveness probe
+      description: "Lightweight Kubernetes-style liveness probe. Does NOT touch\nQdrant \xE2\u20AC\u201D see `/readyz` for\
+        \ the readiness probe.\n"
+      operationId: liveness
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /readyz:
+    get:
+      tags:
+      - health
+      summary: Readiness probe
+      description: 'Pings the configured Qdrant collection and Redis. Returns
+        200 when the Qdrant cluster is reachable and 503 otherwise.
+        `redis` in the payload is `false` when Redis is disabled or
+        unreachable; the probe still returns 200 because Qdrant is the
+        hard dependency (Redis is best-effort). See docs/12-REDIS.md.
+
+        '
+      operationId: readiness
+      responses:
+        '200':
+          description: "Ready \xE2\u20AC\u201D Qdrant reachable"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+        '503':
+          description: "Not ready \xE2\u20AC\u201D Qdrant unreachable"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+components:
+  securitySchemes:
+    DeviceBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'HS256-signed JWT issued by /auth/login. The token
+
+        carries the device_id as its `sub` claim and the literal
+
+        string `access` as its `type` claim. Tokens expire after
+
+        JWT_ACCESS_TTL_SECONDS (default 900s = 15 min); refresh via
+
+        /auth/refresh. The v0 login endpoint accepts any 8+ char
+
+        device_token -- OIDC swap replaces that with a real
+
+        auth-code exchange.'
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Request payload failed schema validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HTTPValidationError'
+  schemas:
+    PointPayload:
+      type: object
+      description: 'Per-point metadata stored alongside the vector. Bumping
+
+        `schema_version` is how we evolve this payload without breaking
+
+        old clients (the server writes whatever the device sends and
+
+        stamps `server_version` on conflict resolution).
+
+        '
+      additionalProperties: false
+      required:
+      - photo_id
+      - device_id
+      - captured_at
+      - project_id
+      - file_path
+      - local_updated_at
+      - vector_checksum
+      properties:
+        schema_version:
+          type: integer
+          default: 1
+          description: Payload schema version. v1 = initial.
+        photo_id:
+          type: string
+          description: ULID of the photo
+        device_id:
+          type: string
+        captured_at:
+          type: string
+          format: date-time
+        lat:
+          type:
+          - number
+          - 'null'
+          format: double
+        lng:
+          type:
+          - number
+          - 'null'
+          format: double
+        gps_status:
+          type: string
+          enum:
+          - ok
+          - unavailable
+          - denied
+          default: ok
+        project_id:
+          type: string
+        file_path:
+          type: string
+          description: "Relative path on the device (e.g. `photos/01HF\xE2\u20AC\xA6jpg`)"
+        embedding_status:
+          type: string
+          enum:
+          - ok
+          - pending
+          - failed
+          default: ok
+        enrichment_id:
+          type:
+          - string
+          - 'null'
+        enrichment_tags:
+          type: array
+          items:
+            type: string
+          default: []
+        enrichment_objects:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          default: []
+        enrichment_text:
+          type:
+          - string
+          - 'null'
+        synced_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        local_updated_at:
+          type: string
+          format: date-time
+          description: LWW timestamp on the device; used for conflict resolution.
+        vector_checksum:
+          type: string
+          description: 'Hash of the embedding vector. Same value on retry = idempotent.
+
+            '
+    Point:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - vector
+      - payload
+      properties:
+        id:
+          type: string
+          description: Point id (UUID for Qdrant Cloud compatibility)
+        vector:
+          type: array
+          items:
+            type: number
+            format: float
+          minItems: 512
+          maxItems: 512
+          description: 512-dim embedding (MobileNetV3 / CLIP variant)
+        payload:
+          $ref: '#/components/schemas/PointPayload'
+    UploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - device_id
+      - batch_id
+      - points
+      properties:
+        device_id:
+          type: string
+        batch_id:
+          type: string
+          description: Client-generated ULID for the upload batch
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/Point'
+          maxItems: 100
+    PullRequest:
+      type: object
+      description: 'NOTE: the live server uses GET /sync/pull with query params, not
+
+        a JSON body. This schema exists for documentation symmetry; the
+
+        server''s pull endpoint does NOT accept this body today. See
+
+        docs/OPENAPI-FINDINGS.md.
+
+        '
+      additionalProperties: false
+      required:
+      - device_id
+      - since_ts
+      properties:
+        device_id:
+          type: string
+        since_ts:
+          type: string
+          format: date-time
+          description: Server timestamp to pull updates after.
+    WalReplayRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - device_id
+      - batch_id
+      - points
+      properties:
+        device_id:
+          type: string
+        batch_id:
+          type: string
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/Point'
+          maxItems: 100
+        replay:
+          type: boolean
+          default: true
+    PointResult:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - status
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+          - accepted
+          - accepted_with_merge
+          - conflict_resolved
+          - rejected_too_old
+          - rejected_invalid_payload
+        resolution:
+          type:
+          - string
+          - 'null'
+          enum:
+          - local_wins
+          - remote_wins
+          - merged
+          - null
+        resolved_payload:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        error_message:
+          type:
+          - string
+          - 'null'
+        server_version:
+          type:
+          - integer
+          - 'null'
+          description: 'Monotonic per-point version on the server. Bumped on each
+
+            conflict resolution.
+
+            '
+    UploadResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - batch_id
+      - server_time
+      - results
+      - next_cursor
+      properties:
+        batch_id:
+          type: string
+        server_time:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PointResult'
+        next_cursor:
+          type: string
+          description: Opaque cursor for the next pull.
+    IdempotentUploadResponse:
+      type: object
+      description: 'Returned by `POST /sync/upload` when the request body
+        matches (by canonical SHA-256) a batch already accepted in the
+        last 24h. `already_received` is always `true`; `results` is
+        empty; `next_cursor` echoes the cursor from the original
+        (cached) response so the device''s pull-cursor state machine
+        keeps moving. Falls back to the original UploadResponse shape
+        when Redis is disabled/unreachable.
+      '
+      additionalProperties: false
+      required:
+      - batch_id
+      - server_time
+      - results
+      - next_cursor
+      - already_received
+      properties:
+        batch_id:
+          type: string
+        server_time:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PointResult'
+        next_cursor:
+          type: string
+          description: Opaque cursor for the next pull. Echoes the cursor from the original (cached) response.
+        already_received:
+          type: boolean
+          description: Always `true`. Marks this response as a duplicate-upload replay.
+          default: true
+    PullResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - server_time
+      - points
+      - next_cursor
+      - has_more
+      properties:
+        server_time:
+          type: string
+          format: date-time
+        points:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            description: "Loose shape \xE2\u20AC\u201D the server returns `dict[str, Any]`. Real\nrows include `id`, `vector`\
+              \ (often empty for scrolled\nresults), and `payload`.\n"
+        next_cursor:
+          type: string
+        has_more:
+          type: boolean
+    WalReplayResponse:
+      description: "The server reuses `UploadResponse` for WAL replay \xE2\u20AC\u201D there is no\nseparate shape. Kept here\
+        \ for spec discoverability.\n"
+      type: object
+      additionalProperties: false
+      required:
+      - batch_id
+      - server_time
+      - results
+      - next_cursor
+      properties:
+        batch_id:
+          type: string
+        server_time:
+          type: string
+          format: date-time
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PointResult'
+        next_cursor:
+          type: string
+    ConflictDetailResponse:
+      type: object
+      description: "Audit record for a single photo's last conflict resolution.
+        Both `local` and `remote` are full `PointPayload` shapes (validated
+        client-side via Pydantic before serialization).
+      "
+      additionalProperties: false
+      required:
+      - photo_id
+      - remote
+      - winner
+      - fields_changed
+      - resolved_at
+      properties:
+        photo_id:
+          type: string
+          description: UUID of the photo.
+        local:
+          description: "Payload as stored on the device's last upload. `null` if
+            the device has never uploaded a snapshot for this photo.
+          "
+          oneOf:
+          - $ref: '#/components/schemas/PointPayload'
+          - type: 'null'
+        remote:
+          $ref: '#/components/schemas/PointPayload'
+        winner:
+          type: string
+          enum:
+          - local
+          - remote
+          - merged
+          description: "Which side won the conflict. `merged` means the two
+            payloads were idempotent (same vector checksum) and no actual
+            conflict occurred.
+          "
+        fields_changed:
+          type: array
+          items:
+            type: string
+          description: "Top-level payload fields where `local` and `remote` differ.
+            Empty when `winner == merged`.
+          "
+        resolved_at:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the resolution was committed.
+    HeartbeatResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - server_time
+      - qdrant_reachable
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+          - degraded
+        server_time:
+          type: string
+          format: date-time
+        qdrant_reachable:
+          type: boolean
+        qdrant_point_count:
+          type:
+          - integer
+          - 'null'
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - alive
+          description: "Currently only `alive` is returned. The PRD sketches a\n`version` field here \xE2\u20AC\u201D see\
+            \ OPENAPI-FINDINGS.md.\n"
+          example: alive
+    ReadyResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - redis
+      properties:
+        status:
+          type: string
+          enum:
+          - ready
+          - not_ready
+        qdrant_collection:
+          type: string
+          description: Only present on 200.
+        qdrant_points:
+          type: integer
+          description: Only present on 200.
+        qdrant_status:
+          type: string
+          description: Only present on 200. Raw `str(qdrant_info.status)`.
+        redis:
+          type: boolean
+          description: '`true` when Redis is enabled AND the live ping succeeds.
+            `false` when Redis is disabled in config or unreachable.
+            A `false` here is non-fatal — revocation + idempotency
+            degrade gracefully. See docs/12-REDIS.md.
+          '
+        error:
+          type: string
+          description: Only present on 503.
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      description: Generic FastAPI HTTP error envelope.
+      properties:
+        detail:
+          type: string
+    HTTPValidationError:
+      type: object
+      additionalProperties: false
+      required:
+      - detail
+      properties:
+        detail:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorItem'
+    ValidationErrorItem:
+      type: object
+      additionalProperties: true
+      properties:
+        loc:
+          type: array
+          items:
+            oneOf:
+            - type: string
+            - type: integer
+        msg:
+          type: string
+        type:
+          type: string
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - device_id
+      - device_token
+      properties:
+        device_id:
+          type: string
+          description: Per-install device id (ULID).
+        device_token:
+          type: string
+          minLength: 8
+          description: 'Today: any 8+ char shared secret. OIDC pass: an auth-code.'
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          description: A refresh token issued by /auth/login or a prior /auth/refresh.
+    TokenPair:
+      type: object
+      additionalProperties: false
+      required:
+      - access_token
+      - refresh_token
+      - expires_in
+      properties:
+        access_token:
+          type: string
+          description: HS256 JWT, 15-minute TTL, type=access.
+        refresh_token:
+          type: string
+          description: HS256 JWT, 7-day TTL, type=refresh, has jti.
+        expires_in:
+          type: integer
+          description: Access-token TTL in seconds.
+    MeResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - device_id
+      - exp
+      properties:
+        device_id:
+          type: string
+          description: Sub claim of the access token used for this call.
+        exp:
+          type: integer
+          description: Unix-seconds expiry of the access token used for this call.
+    LogoutRequest:
+      type: object
+      description: 'Body of `POST /auth/logout`. The body is optional; supply
+        `refresh_token` to also revoke the refresh side of the current
+        session. The access token that authenticated the call is
+        always revoked regardless of body.
+      '
+      additionalProperties: false
+      properties:
+        refresh_token:
+          type:
+          - string
+          - 'null'
+          minLength: 1
+          description: Optional refresh token to also revoke. Invalid refresh tokens are silently ignored.
+    LogoutResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - revoked
+      - access_revoked
+      - refresh_revoked
+      properties:
+        revoked:
+          type: boolean
+          description: Always `true` once authentication succeeded.
+        access_revoked:
+          type: boolean
+          description: Whether the access token's `jti` was written to the revocation list.
+        refresh_revoked:
+          type: boolean
+          description: Whether the supplied refresh token's `jti` was written to the revocation list (`false` when no refresh_token was supplied).
+    WalEntry:
+      type: object
+      description: "A single write-ahead-log entry as it lives on the device before\nit's been flushed via `POST /sync/upload`.\
+        \ Currently the server\ndoes NOT have a dedicated WAL schema endpoint \xE2\u20AC\u201D the device\nreplays the original\
+        \ `UploadRequest` via `/sync/wal/replay`.\nKept here so the type contract is documented for PS03 review.\n"
+      additionalProperties: true
+      properties:
+        batch_id:
+          type: string
+        device_id:
+          type: string
+        point_id:
+          type: string
+        op:
+          type: string
+          enum:
+          - insert
+          - update
+          - delete
+        vector_checksum:
+          type: string
+        local_updated_at:
+          type: string
+          format: date-time

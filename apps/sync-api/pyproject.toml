@@ -13,6 +13,8 @@ dependencies = [
     "python-ulid>=2.0.0",
     "loguru>=0.7.0",
     "python-multipart>=0.0.20",
+    "pyjwt>=2.8.0",
+    "redis>=5.0",
 ]
 
 [project.optional-dependencies]
@@ -34,3 +36,10 @@ include = ["app*"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "live_redis: opt-in to running against the real Redis cluster (skipped unless REDIS_ENABLED=true)",
+]

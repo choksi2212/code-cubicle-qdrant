@@ -9,8 +9,10 @@ import com.facebook.react.module.model.ReactModuleInfoProvider
 /**
  * Registers the FieldEdge native module with React Native.
  *
- * Both the FieldEdge Rust bridge (UniFFI Kotlin bindings) and the
- * ONNX Runtime module are exposed through this package.
+ * Three modules are exposed through this package:
+ *   - FieldEdgeRust   — UniFFI Kotlin bindings for the Rust core
+ *   - OnnxClip        — ONNX Runtime wrapper for CLIP-ViT-B/32
+ *   - SecureStore     — EncryptedSharedPreferences-backed KV for JWTs
  */
 class FieldEdgePackage : BaseReactPackage() {
 
@@ -18,6 +20,7 @@ class FieldEdgePackage : BaseReactPackage() {
         return when (name) {
             "FieldEdgeRust" -> FieldEdgeRustModule(reactContext)
             "OnnxClip" -> OnnxClipModule(reactContext)
+            "SecureStore" -> SecureStoreModule(reactContext)
             else -> null
         }
     }
@@ -41,7 +44,16 @@ class FieldEdgePackage : BaseReactPackage() {
                     false,
                     false,
                 ),
+                "SecureStore" to ReactModuleInfo(
+                    "SecureStore",
+                    SecureStoreModule::class.java.name,
+                    false,
+                    false,
+                    false,
+                    false,
+                ),
             )
         }
     }
 }
+

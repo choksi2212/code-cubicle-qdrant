@@ -1,0 +1,303 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`MapScreen matches the locked layout snapshot (no GPS data) 1`] = `
+<SafeAreaView
+  style={
+    {
+      "backgroundColor": "#0E1116",
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "padding": 16,
+        "paddingTop": 8,
+      }
+    }
+  >
+    <Pressable
+      hitSlop={12}
+      onPress={[Function]}
+    >
+      <Text
+        style={
+          {
+            "color": "#00BFA6",
+            "fontSize": 14,
+            "fontWeight": "600",
+          }
+        }
+      >
+        ← Back
+      </Text>
+    </Pressable>
+    <Text
+      style={
+        {
+          "color": "#E6EAF0",
+          "fontSize": 22,
+          "fontWeight": "bold",
+        }
+      }
+    >
+      Map
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#8B95A5",
+          "fontSize": 12,
+          "fontWeight": "600",
+          "minWidth": 100,
+          "textAlign": "right",
+        }
+      }
+    >
+      0
+       plotted
+    </Text>
+  </View>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flex": 1,
+        "justifyContent": "center",
+        "padding": 32,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#5B6573",
+          "fontSize": 16,
+          "fontWeight": "600",
+        }
+      }
+    >
+      No GPS coordinates captured yet
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#5B6573",
+          "fontSize": 12,
+          "marginTop": 4,
+          "textAlign": "center",
+        }
+      }
+    >
+      Enable location permission when capturing to plot photos here.
+    </Text>
+  </View>
+</SafeAreaView>
+`;
+
+exports[`MapScreen matches the locked layout snapshot (populated with markers) 1`] = `
+<SafeAreaView
+  style={
+    {
+      "backgroundColor": "#0E1116",
+      "flex": 1,
+    }
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "padding": 16,
+        "paddingTop": 8,
+      }
+    }
+  >
+    <Pressable
+      hitSlop={12}
+      onPress={[Function]}
+    >
+      <Text
+        style={
+          {
+            "color": "#00BFA6",
+            "fontSize": 14,
+            "fontWeight": "600",
+          }
+        }
+      >
+        ← Back
+      </Text>
+    </Pressable>
+    <Text
+      style={
+        {
+          "color": "#E6EAF0",
+          "fontSize": 22,
+          "fontWeight": "bold",
+        }
+      }
+    >
+      Map
+    </Text>
+    <Text
+      style={
+        {
+          "color": "#8B95A5",
+          "fontSize": 12,
+          "fontWeight": "600",
+          "minWidth": 100,
+          "textAlign": "right",
+        }
+      }
+    >
+      2
+       plotted
+    </Text>
+  </View>
+  <ScrollView
+    contentContainerStyle={
+      {
+        "alignItems": "center",
+        "padding": 16,
+      }
+    }
+  >
+    <View
+      accessibilityLabel="Map view (offline, no tiles)"
+      style={
+        [
+          {
+            "backgroundColor": "#1A1F26",
+            "borderColor": "#2A2F36",
+            "borderRadius": 12,
+            "borderWidth": 1,
+            "overflow": "hidden",
+            "position": "relative",
+          },
+          {
+            "height": 320,
+            "width": 320,
+          },
+        ]
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#5B6573",
+            "fontSize": 10,
+            "left": 6,
+            "position": "absolute",
+            "top": 4,
+          }
+        }
+      >
+        12.360
+        °
+      </Text>
+      <Text
+        style={
+          {
+            "bottom": 4,
+            "color": "#5B6573",
+            "fontSize": 10,
+            "position": "absolute",
+            "right": 6,
+          }
+        }
+      >
+        56.780
+        °
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#5B6573",
+            "fontSize": 10,
+            "position": "absolute",
+            "right": 6,
+            "top": 4,
+          }
+        }
+      >
+        56.800
+        °
+      </Text>
+      <Text
+        style={
+          {
+            "bottom": 4,
+            "color": "#5B6573",
+            "fontSize": 10,
+            "left": 6,
+            "position": "absolute",
+          }
+        }
+      >
+        12.340
+        °
+      </Text>
+      <Pressable
+        accessibilityLabel="Photo at 12.3400, 56.7800"
+        onPress={[Function]}
+        style={
+          [
+            {
+              "position": "absolute",
+            },
+            {
+              "backgroundColor": "#00BFA6",
+              "borderRadius": 8,
+              "height": 16,
+              "left": 4,
+              "opacity": 1,
+              "top": 300,
+              "width": 16,
+            },
+          ]
+        }
+      />
+      <Pressable
+        accessibilityLabel="Photo at 12.3600, 56.8000"
+        onPress={[Function]}
+        style={
+          [
+            {
+              "position": "absolute",
+            },
+            {
+              "backgroundColor": "#00BFA6",
+              "borderRadius": 8,
+              "height": 16,
+              "left": 300,
+              "opacity": 1,
+              "top": 4,
+              "width": 16,
+            },
+          ]
+        }
+      />
+    </View>
+    <Text
+      style={
+        {
+          "color": "#5B6573",
+          "fontSize": 12,
+          "marginTop": 12,
+          "paddingHorizontal": 24,
+          "textAlign": "center",
+        }
+      }
+    >
+      Tap a marker to open the photo. Larger dots are fresher captures (last 30 days).
+    </Text>
+  </ScrollView>
+</SafeAreaView>
+`;
