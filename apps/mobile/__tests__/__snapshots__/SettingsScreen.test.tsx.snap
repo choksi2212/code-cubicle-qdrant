@@ -86,6 +86,242 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
           }
         }
       >
+        Sync
+      </Text>
+      <View
+        style={
+          {
+            "backgroundColor": "#1A1F26",
+            "borderRadius": 12,
+            "gap": 12,
+            "padding": 16,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "flexDirection": "row",
+              "flexWrap": "wrap",
+              "gap": 8,
+            }
+          }
+        >
+          <Pressable
+            onPress={[Function]}
+            style={
+              [
+                {
+                  "backgroundColor": "#2A2F36",
+                  "borderColor": "#2A2F36",
+                  "borderRadius": 20,
+                  "borderWidth": 1,
+                  "paddingHorizontal": 14,
+                  "paddingVertical": 8,
+                },
+                {
+                  "backgroundColor": "#003B33",
+                  "borderColor": "#00BFA6",
+                },
+              ]
+            }
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#8B95A5",
+                    "fontSize": 14,
+                    "fontWeight": "600",
+                  },
+                  {
+                    "color": "#00BFA6",
+                  },
+                ]
+              }
+            >
+              Manual
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={[Function]}
+            style={
+              [
+                {
+                  "backgroundColor": "#2A2F36",
+                  "borderColor": "#2A2F36",
+                  "borderRadius": 20,
+                  "borderWidth": 1,
+                  "paddingHorizontal": 14,
+                  "paddingVertical": 8,
+                },
+                false,
+              ]
+            }
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#8B95A5",
+                    "fontSize": 14,
+                    "fontWeight": "600",
+                  },
+                  false,
+                ]
+              }
+            >
+              15m
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={[Function]}
+            style={
+              [
+                {
+                  "backgroundColor": "#2A2F36",
+                  "borderColor": "#2A2F36",
+                  "borderRadius": 20,
+                  "borderWidth": 1,
+                  "paddingHorizontal": 14,
+                  "paddingVertical": 8,
+                },
+                false,
+              ]
+            }
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#8B95A5",
+                    "fontSize": 14,
+                    "fontWeight": "600",
+                  },
+                  false,
+                ]
+              }
+            >
+              1h
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={[Function]}
+            style={
+              [
+                {
+                  "backgroundColor": "#2A2F36",
+                  "borderColor": "#2A2F36",
+                  "borderRadius": 20,
+                  "borderWidth": 1,
+                  "paddingHorizontal": 14,
+                  "paddingVertical": 8,
+                },
+                false,
+              ]
+            }
+          >
+            <Text
+              style={
+                [
+                  {
+                    "color": "#8B95A5",
+                    "fontSize": 14,
+                    "fontWeight": "600",
+                  },
+                  false,
+                ]
+              }
+            >
+              6h
+            </Text>
+          </Pressable>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "justifyContent": "space-between",
+              "paddingVertical": 8,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#8B95A5",
+                "fontSize": 14,
+              }
+            }
+          >
+            Last sync
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#E6EAF0",
+                "fontSize": 14,
+                "fontWeight": "600",
+              }
+            }
+          >
+            never
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "justifyContent": "space-between",
+              "paddingVertical": 8,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#8B95A5",
+                "fontSize": 14,
+              }
+            }
+          >
+            Next sync
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#E6EAF0",
+                "fontSize": 14,
+                "fontWeight": "600",
+              }
+            }
+          >
+            —
+          </Text>
+        </View>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "marginTop": 16,
+          "paddingHorizontal": 16,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#8B95A5",
+            "fontSize": 12,
+            "letterSpacing": 1,
+            "marginBottom": 8,
+            "textTransform": "uppercase",
+          }
+        }
+      >
         Server URL
       </Text>
       <View

@@ -58,6 +58,7 @@ beforeEach(async () => {
     serverUrl: useSettingsStore.getState().serverUrl,
     photoCap: 5000,
     hasOnboarded: false,
+    syncInterval: 'manual',
   });
 });
 
@@ -67,6 +68,7 @@ describe('settingsStore', () => {
     expect(typeof s.serverUrl).toBe('string');
     expect(s.photoCap).toBe(5000);
     expect(s.hasOnboarded).toBe(false);
+    expect(s.syncInterval).toBe('manual');
   });
 
   it('persists every setter change to AsyncStorage', async () => {
@@ -75,6 +77,7 @@ describe('settingsStore', () => {
     s.setServerUrl('https://example.test');
     s.setPhotoCap(123);
     s.markOnboarded();
+    s.setSyncInterval('1h');
 
     // Wait a tick for persist's debounced write.
     await new Promise((r) => setTimeout(r, 50));
@@ -85,6 +88,8 @@ describe('settingsStore', () => {
     expect(parsed.state.serverUrl).toBe('https://example.test');
     expect(parsed.state.photoCap).toBe(123);
     expect(parsed.state.hasOnboarded).toBe(true);
+    expect(parsed.state.syncInterval).toBe('1h');
+    expect(parsed.version).toBe(3);
   });
 
   it('reloads persisted state when the module is re-required (cold launch)', async () => {
@@ -92,6 +97,7 @@ describe('settingsStore', () => {
     useSettingsStore.getState().setServerUrl('https://reload.test');
     useSettingsStore.getState().setPhotoCap(42);
     useSettingsStore.getState().markOnboarded();
+    useSettingsStore.getState().setSyncInterval('15m');
     await new Promise((r) => setTimeout(r, 50));
 
     // Round 2 — wipe the module cache and require it again to simulate
@@ -107,17 +113,20 @@ describe('settingsStore', () => {
     expect(s.serverUrl).toBe('https://reload.test');
     expect(s.photoCap).toBe(42);
     expect(s.hasOnboarded).toBe(true);
+    expect(s.syncInterval).toBe('15m');
   });
 
   it('reset() clears onboarding flag and restores defaults', () => {
     useSettingsStore.getState().markOnboarded();
     useSettingsStore.getState().setPhotoCap(7);
+    useSettingsStore.getState().setSyncInterval('6h');
     expect(useSettingsStore.getState().hasOnboarded).toBe(true);
 
     useSettingsStore.getState().reset();
     const after = useSettingsStore.getState();
     expect(after.hasOnboarded).toBe(false);
     expect(after.photoCap).toBe(5000);
+    expect(after.syncInterval).toBe('manual');
   });
 
   it('setPhotoCap floors non-negative integers', () => {
@@ -151,7 +160,37 @@ describe('settingsStore', () => {
     expect(s.serverUrl).toBe('https://v1.test');
     expect(s.photoCap).toBe(100);
     expect(s.hasOnboarded).toBe(true);
-    // syncInterval must be gone — accessing it should be undefined.
-    expect((s as any).syncInterval).toBeUndefined();
+    // After v1→v2 strip, v2→v3 reintroduces syncInterval as 'manual'.
+    expect(s.syncInterval).toBe('manual');
+  });
+
+  it('v2→v3 migration reintroduces syncInterval (defaults to "manual")', async () => {
+    memStore[STORAGE_KEY] = JSON.stringify({
+      state: {
+        serverUrl: 'https://v2.test',
+        photoCap: 250,
+        hasOnboarded: false,
+        // syncInterval intentionally absent — pre-v3 persisted state
+      },
+      version: 2,
+    });
+
+    jest.resetModules();
+    const { useSettingsStore: reloaded } = require('../src/stores/settingsStore');
+    await new Promise((r) => setTimeout(r, 50));
+    const s = reloaded.getState();
+    expect(s.serverUrl).toBe('https://v2.test');
+    expect(s.photoCap).toBe(250);
+    expect(s.syncInterval).toBe('manual');
+  });
+
+  it('setSyncInterval only accepts the four documented values', () => {
+    const s = useSettingsStore.getState();
+    s.setSyncInterval('15m');
+    expect(useSettingsStore.getState().syncInterval).toBe('15m');
+    s.setSyncInterval('6h');
+    expect(useSettingsStore.getState().syncInterval).toBe('6h');
+    s.setSyncInterval('manual');
+    expect(useSettingsStore.getState().syncInterval).toBe('manual');
   });
 });

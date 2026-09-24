@@ -2,15 +2,19 @@
  * SettingsScreen — gear-icon screen exposed from the Home header.
  *
  * Sections:
- *   - Server URL      (text input, persisted to settings store)
- *   - Photo cap       (number stepper; 0 = unlimited)
- *   - Account         (device token prefix + Logout button — clears local
- *                      device token + onboarding flag; no server-side
- *                      session exists yet, so logout is local-only)
- *   - Storage usage   (photos / shard / WAL bytes; Refresh button)
- *   - About           (app version + hackathon credit)
+ *   - Sync           (interval chips Manual/15m/1h/6h, last attempt, next scheduled,
+ *                     Retry now button when dead-lettered)
+ *   - Server URL     (text input, persisted to settings store)
+ *   - Photo cap      (number stepper; 0 = unlimited)
+ *   - Account        (device token prefix + Logout button — clears local
+ *                     device token + onboarding flag; no server-side
+ *                     session exists yet, so logout is local-only)
+ *   - Storage usage  (photos / shard / WAL bytes; Refresh button)
+ *   - About          (app version + hackathon credit)
  *
  * All persistence flows through the settings store (zustand + AsyncStorage).
+ * The Sync section also calls into `syncScheduler.ts` which talks to
+ * the Android `SyncSchedulerModule` (WorkManager).
  */
 
 import React, { useEffect, useState } from 'react';
@@ -24,9 +28,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSettingsStore } from '../stores/settingsStore';
+import { useSettingsStore, SyncInterval } from '../stores/settingsStore';
+import { useSyncStore } from '../stores/syncStore';
 import { formatBytes, storageUsage, StorageUsage } from '../storage/storageUsage';
 import { getDeviceToken } from '../config';
+import { startSync, stopSync, runOnce, getStatus } from '../services/syncScheduler';
 
 interface Props {
   onClose: () => void;
@@ -35,16 +41,45 @@ interface Props {
 
 const APP_VERSION = '0.1.0';
 
+const INTERVAL_CHIPS: Array<{ key: SyncInterval; label: string }> = [
+  { key: 'manual', label: 'Manual' },
+  { key: '15m', label: '15m' },
+  { key: '1h', label: '1h' },
+  { key: '6h', label: '6h' },
+];
+
+function formatNextSync(next: Date | null): string {
+  if (!next) return '—';
+  const ms = next.getTime() - Date.now();
+  if (ms <= 0) return 'now';
+  const mins = Math.round(ms / 60_000);
+  if (mins < 60) return `in ${mins}m`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `in ${hrs}h`;
+  const days = Math.round(hrs / 24);
+  return `in ${days}d`;
+}
+
 export function SettingsScreen({ onClose, onLogout }: Props) {
   const serverUrl = useSettingsStore((s) => s.serverUrl);
   const photoCap = useSettingsStore((s) => s.photoCap);
+  const syncInterval = useSettingsStore((s) => s.syncInterval);
   const setServerUrl = useSettingsStore((s) => s.setServerUrl);
   const setPhotoCap = useSettingsStore((s) => s.setPhotoCap);
+  const setSyncInterval = useSettingsStore((s) => s.setSyncInterval);
+
+  const retryCount = useSyncStore((s) => s.retryCount);
+  const nextRetryAt = useSyncStore((s) => s.nextRetryAt);
+  const deadLetterCount = useSyncStore((s) => s.deadLetterCount);
+  const lastRunAt = useSyncStore((s) => s.lastRunAt);
+  const lastError = useSyncStore((s) => s.lastError);
+  const lastReport = useSyncStore((s) => s.lastReport);
 
   const [urlDraft, setUrlDraft] = useState(serverUrl);
   const [tokenPrefix, setTokenPrefix] = useState('…');
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   useEffect(() => {
     setUrlDraft(serverUrl);
@@ -61,6 +96,13 @@ export function SettingsScreen({ onClose, onLogout }: Props) {
         setTokenPrefix('unknown');
       }
       refreshUsage();
+      // Pull WorkManager's persisted schedule for the "next scheduled" line
+      try {
+        const status = await getStatus();
+        setScheduledAt(status?.lastRunAt ?? null);
+      } catch (_) {
+        // Module not present (jest env) — leave as null.
+      }
     })();
   }, []);
 
@@ -94,13 +136,49 @@ export function SettingsScreen({ onClose, onLogout }: Props) {
     setPhotoCap(n);
   };
 
+  const pickInterval = async (interval: SyncInterval) => {
+    setSyncInterval(interval);
+    try {
+      if (interval === 'manual') {
+        await stopSync();
+      } else {
+        // Default to wifi-only + no-charging constraint — fits field-worker
+        // pattern where the device is rarely on a metered network but
+        // battery may be low.
+        await startSync(interval, true, false);
+      }
+    } catch (e) {
+      console.warn('[SettingsScreen] startSync failed:', e);
+    }
+  };
+
+  const doRetry = async () => {
+    try {
+      await runOnce();
+      Alert.alert('Retry queued', 'A one-shot sync has been enqueued.');
+    } catch (e) {
+      Alert.alert('Retry failed', String(e));
+    }
+  };
+
   const doLogout = () => {
     Alert.alert(
       'Log out?',
       'This clears the device token and onboarding flag. Your photos stay on disk.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Log out', style: 'destructive', onPress: onLogout },
+        {
+          text: 'Log out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await stopSync();
+            } catch (_) {
+              // Best-effort — even if WorkManager cancel fails we proceed.
+            }
+            onLogout();
+          },
+        },
       ],
     );
   };
@@ -115,6 +193,64 @@ export function SettingsScreen({ onClose, onLogout }: Props) {
           <Text style={styles.title}>Settings</Text>
           <View style={{ width: 60 }} />
         </View>
+
+        {/* ─── Sync ──────────────────────────────────────────────────── */}
+        <Section label="Sync">
+          <View style={styles.chipRow}>
+            {INTERVAL_CHIPS.map((chip) => {
+              const active = syncInterval === chip.key;
+              return (
+                <Pressable
+                  key={chip.key}
+                  onPress={() => pickInterval(chip.key)}
+                  style={[styles.chip, active && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {chip.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {deadLetterCount > 0 ? (
+            <View style={styles.deadLetter}>
+              <Text style={styles.deadLetterTitle}>
+                Sync paused ({deadLetterCount}× dead-lettered)
+              </Text>
+              <Text style={styles.deadLetterHint}>
+                Last error: {lastError ?? 'unknown'}
+              </Text>
+              <Pressable style={styles.btnRetry} onPress={doRetry}>
+                <Text style={styles.btnRetryText}>Retry now</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <Row
+                label="Last sync"
+                value={
+                  lastRunAt
+                    ? lastRunAt.toLocaleTimeString()
+                    : 'never'
+                }
+              />
+              <Row
+                label="Next sync"
+                value={formatNextSync(nextRetryAt)}
+              />
+              {retryCount > 0 ? (
+                <Text style={styles.retryHint}>
+                  Retry attempt {retryCount} of 7
+                </Text>
+              ) : null}
+              {lastReport && lastReport.errors > 0 ? (
+                <Text style={styles.retryHint}>
+                  Last run had {lastReport.errors} errors
+                </Text>
+              ) : null}
+            </>
+          )}
+        </Section>
 
         {/* ─── Server URL ──────────────────────────────────────────────── */}
         <Section label="Server URL">
@@ -294,6 +430,44 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: '#2A2F36',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2A2F36',
+  },
+  chipActive: {
+    backgroundColor: '#003B33',
+    borderColor: '#00BFA6',
+  },
+  chipText: { color: '#8B95A5', fontSize: 14, fontWeight: '600' },
+  chipTextActive: { color: '#00BFA6' },
+  retryHint: { color: '#F5A524', fontSize: 12, fontStyle: 'italic' },
+  deadLetter: {
+    backgroundColor: '#2A1A1F',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    gap: 6,
+  },
+  deadLetterTitle: { color: '#EF4444', fontSize: 14, fontWeight: '700' },
+  deadLetterHint: { color: '#FCA5A5', fontSize: 12 },
+  btnRetry: {
+    backgroundColor: '#EF4444',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  btnRetryText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   hint: { color: '#5B6573', fontSize: 12, fontStyle: 'italic' },
   row: {
     flexDirection: 'row',
