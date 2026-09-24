@@ -1,767 +1,265 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`ConflictDetailScreen matches the locked layout snapshot once the fetch resolves 1`] = `
-<ScrollView
+<View
   style={
     {
-      "backgroundColor": "#0E1116",
+      "backgroundColor": "#07080A",
       "flex": 1,
-      "padding": 24,
     }
   }
 >
-  <Text
-    style={
-      {
-        "color": "#E6EAF0",
-        "fontSize": 28,
-        "fontWeight": "bold",
-        "marginBottom": 8,
-        "marginTop": 24,
-      }
-    }
-  >
-    Conflict Detail
-  </Text>
-  <Text
-    style={
-      {
-        "color": "#8B95A5",
-        "fontSize": 14,
-        "marginBottom": 24,
-      }
-    }
-  >
-    photo 
-    550e8400
-    …
-  </Text>
-  <Text
-    style={
-      {
-        "color": "#E6EAF0",
-        "fontSize": 16,
-        "fontWeight": "600",
-        "marginBottom": 8,
-        "marginTop": 16,
-      }
-    }
-  >
-    Local
-  </Text>
   <View
     style={
       {
-        "backgroundColor": "#1A1F26",
-        "borderRadius": 12,
-        "marginBottom": 16,
-        "padding": 16,
+        "gap": 8,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
       }
     }
   >
-    <View>
-      <View
+    <Pressable
+      hitSlop={12}
+      onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
+    >
+      <Animated.View
         style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
+          [
+            undefined,
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
         }
       >
-        <Text
+        <View
           style={
             {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 4,
             }
           }
         >
-          device_id
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
+          <Icon
+            color="#B4BCCC"
+            name="ChevronLeft"
+            size={16}
+            strokeWidth={2}
+          />
+          <Text
+            style={
               {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          dev-tablet-a
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
+                "color": "#B4BCCC",
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              }
             }
-          }
-        >
-          captured_at
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          2026-09-24T10:00:00+00:00
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
+          >
+            Back
+          </Text>
+        </View>
+      </Animated.View>
+    </Pressable>
+    <Text
+      style={
+        {
+          "color": "#F7F9FC",
+          "fontSize": 32,
+          "fontWeight": "700",
+          "letterSpacing": -0.6,
+          "lineHeight": 38,
+          "marginTop": 4,
         }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          project_id
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          proj_demo
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          local_updated_at
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          2026-09-24T10:00:01+00:00
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          vector_checksum
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              {
-                "fontFamily": "monospace",
-              },
-            ]
-          }
-        >
-          sha256:local
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          enrichment_text
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          Hairline crack
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          tags_v2
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          crack
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          enrichment_tags
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          crack
-        </Text>
-      </View>
-    </View>
+      }
+    >
+      Conflict
+    </Text>
   </View>
-  <Text
-    style={
+  <ScrollView
+    contentContainerStyle={
       {
-        "color": "#E6EAF0",
-        "fontSize": 16,
-        "fontWeight": "600",
-        "marginBottom": 8,
-        "marginTop": 16,
-      }
-    }
-  >
-    Remote
-  </Text>
-  <View
-    style={
-      {
-        "backgroundColor": "#1A1F26",
-        "borderRadius": 12,
-        "marginBottom": 16,
-        "padding": 16,
-      }
-    }
-  >
-    <View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          device_id
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          dev-tablet-b
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          captured_at
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          2026-09-24T10:00:00+00:00
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          project_id
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          proj_demo
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          local_updated_at
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          2026-09-24T09:00:00+00:00
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          vector_checksum
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              {
-                "fontFamily": "monospace",
-              },
-            ]
-          }
-        >
-          sha256:remote
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          enrichment_text
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          Hairline crack (revised)
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          tags_v2
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          crack, spalling
-        </Text>
-      </View>
-      <View
-        style={
-          {
-            "alignItems": "flex-start",
-            "borderBottomColor": "#0E1116",
-            "borderBottomWidth": 1,
-            "flexDirection": "row",
-            "justifyContent": "space-between",
-            "paddingVertical": 6,
-          }
-        }
-      >
-        <Text
-          style={
-            {
-              "color": "#8B95A5",
-              "flex": 1,
-              "fontSize": 12,
-            }
-          }
-        >
-          enrichment_tags
-        </Text>
-        <Text
-          numberOfLines={3}
-          style={
-            [
-              {
-                "color": "#E6EAF0",
-                "flex": 2,
-                "fontSize": 12,
-                "textAlign": "right",
-              },
-              undefined,
-            ]
-          }
-        >
-          crack, spalling
-        </Text>
-      </View>
-    </View>
-  </View>
-  <Text
-    style={
-      {
-        "color": "#E6EAF0",
-        "fontSize": 16,
-        "fontWeight": "600",
-        "marginBottom": 8,
-        "marginTop": 16,
-      }
-    }
-  >
-    Resolution
-  </Text>
-  <View
-    style={
-      {
-        "backgroundColor": "#1A1F26",
-        "borderRadius": 12,
-        "marginBottom": 16,
-        "padding": 16,
+        "gap": 16,
+        "padding": 20,
+        "paddingBottom": 32,
       }
     }
   >
     <View
       style={
+        [
+          {
+            "backgroundColor": "#12151B",
+            "borderRadius": 14,
+          },
+          {
+            "borderColor": "#22272F",
+            "borderWidth": 1,
+          },
+          {
+            "elevation": 2,
+            "shadowColor": "#000",
+            "shadowOffset": {
+              "height": 2,
+              "width": 0,
+            },
+            "shadowOpacity": 0.18,
+            "shadowRadius": 4,
+          },
+          {
+            "padding": 16,
+          },
+          [
+            {
+              "alignItems": "center",
+              "gap": 4,
+              "paddingVertical": 20,
+            },
+            {
+              "borderColor": "#3B82F6",
+            },
+          ],
+        ]
+      }
+    >
+      <View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 9999,
+              "height": 44,
+              "justifyContent": "center",
+              "marginBottom": 8,
+              "width": 44,
+            },
+            {
+              "backgroundColor": "#3B82F626",
+            },
+          ]
+        }
+      >
+        <Icon
+          color="#3B82F6"
+          name="ChevronLeft"
+          size={20}
+          strokeWidth={2}
+        />
+      </View>
+      <Text
+        style={
+          {
+            "color": "#F7F9FC",
+            "fontSize": 20,
+            "fontWeight": "600",
+            "letterSpacing": -0.2,
+            "lineHeight": 26,
+          }
+        }
+      >
+        Local version won
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#677289",
+            "fontSize": 13,
+            "fontWeight": "400",
+            "lineHeight": 18,
+          }
+        }
+      >
+        2
+         field
+        s
+         changed
+      </Text>
+    </View>
+    <Text
+      style={
         {
-          "alignItems": "center",
+          "color": "#677289",
+          "fontSize": 11,
+          "fontWeight": "500",
+          "letterSpacing": 1.2,
+          "lineHeight": 14,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      Changed fields
+    </Text>
+    <View
+      style={
+        {
           "flexDirection": "row",
+          "flexWrap": "wrap",
           "gap": 8,
-          "marginBottom": 12,
+        }
+      }
+    >
+      <View
+        style={
+          {
+            "backgroundColor": "rgba(245,158,11,0.14)",
+            "borderRadius": 9999,
+            "paddingHorizontal": 12,
+            "paddingVertical": 4,
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#F59E0B",
+              "fontSize": 13,
+              "fontWeight": "400",
+              "lineHeight": 18,
+            }
+          }
+        >
+          enrichment_text
+        </Text>
+      </View>
+      <View
+        style={
+          {
+            "backgroundColor": "rgba(245,158,11,0.14)",
+            "borderRadius": 9999,
+            "paddingHorizontal": 12,
+            "paddingVertical": 4,
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#F59E0B",
+              "fontSize": 13,
+              "fontWeight": "400",
+              "lineHeight": 18,
+            }
+          }
+        >
+          tags_v2
+        </Text>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "flexDirection": "row",
+          "gap": 12,
         }
       }
     >
@@ -769,124 +267,534 @@ exports[`ConflictDetailScreen matches the locked layout snapshot once the fetch 
         style={
           [
             {
-              "backgroundColor": "#2A2F36",
-              "borderRadius": 6,
-              "paddingHorizontal": 12,
-              "paddingVertical": 4,
+              "backgroundColor": "#12151B",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "flex": 1,
+              "padding": 12,
             },
             {
-              "backgroundColor": "#00BFA6",
+              "borderColor": "#3B82F6",
             },
-            false,
-            false,
           ]
         }
       >
-        <Text
+        <View
           style={
-            {
-              "color": "#0E1116",
-              "fontSize": 12,
-              "fontWeight": "700",
-            }
+            [
+              {
+                "alignItems": "center",
+                "borderBottomColor": "#22272F",
+                "borderBottomWidth": 1,
+                "flexDirection": "row",
+                "gap": 8,
+                "marginBottom": 8,
+                "paddingBottom": 8,
+              },
+              {
+                "borderColor": "#3B82F6",
+              },
+            ]
           }
         >
-          local
-        </Text>
-      </View>
-      <Text
-        style={
-          {
-            "color": "#8B95A5",
+          <View
+            style={
+              [
+                {
+                  "borderRadius": 4,
+                  "height": 8,
+                  "width": 8,
+                },
+                {
+                  "backgroundColor": "#3B82F6",
+                },
+              ]
+            }
+          />
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Local
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
           }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Captured
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            24/9/2026, 3:30:00 pm
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Project
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            proj_demo
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            GPS
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            —
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Embedding
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            —
+          </Text>
+        </View>
+      </View>
+      <View
+        style={
+          [
+            {
+              "backgroundColor": "#12151B",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "flex": 1,
+              "padding": 12,
+            },
+            {
+              "borderColor": "#10B981",
+            },
+          ]
         }
       >
-        winner
-      </Text>
+        <View
+          style={
+            [
+              {
+                "alignItems": "center",
+                "borderBottomColor": "#22272F",
+                "borderBottomWidth": 1,
+                "flexDirection": "row",
+                "gap": 8,
+                "marginBottom": 8,
+                "paddingBottom": 8,
+              },
+              {
+                "borderColor": "#10B981",
+              },
+            ]
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "borderRadius": 4,
+                  "height": 8,
+                  "width": 8,
+                },
+                {
+                  "backgroundColor": "#10B981",
+                },
+              ]
+            }
+          />
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Remote
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Captured
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            24/9/2026, 3:30:00 pm
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Project
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            proj_demo
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            GPS
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            —
+          </Text>
+        </View>
+        <View
+          style={
+            [
+              {
+                "flexDirection": "row",
+                "justifyContent": "space-between",
+                "paddingVertical": 8,
+              },
+              false,
+            ]
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#677289",
+                "fontSize": 13,
+                "fontWeight": "400",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Embedding
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "right",
+              }
+            }
+          >
+            —
+          </Text>
+        </View>
+      </View>
     </View>
     <Text
       style={
         {
-          "color": "#8B95A5",
-          "fontSize": 12,
-          "marginBottom": 4,
+          "color": "#677289",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "lineHeight": 18,
           "marginTop": 8,
+          "textAlign": "center",
         }
       }
     >
-      Fields changed
+      Resolved at 
+      24/9/2026, 3:30:02 pm
     </Text>
-    <Text
-      style={
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={
         {
-          "color": "#E6EAF0",
-          "fontSize": 14,
-          "paddingVertical": 2,
+          "busy": false,
+          "disabled": false,
         }
       }
-    >
-      • 
-      enrichment_text
-    </Text>
-    <Text
-      style={
+      android_ripple={
         {
-          "color": "#E6EAF0",
-          "fontSize": 14,
-          "paddingVertical": 2,
+          "borderless": false,
+          "color": "rgba(255,255,255,0.08)",
         }
       }
-    >
-      • 
-      tags_v2
-    </Text>
-    <Text
+      onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
       style={
-        {
-          "color": "#8B95A5",
-          "fontSize": 12,
-          "marginBottom": 4,
-          "marginTop": 8,
-        }
+        [
+          {
+            "alignItems": "center",
+            "borderRadius": 10,
+            "borderWidth": 1,
+            "justifyContent": "center",
+            "overflow": "hidden",
+          },
+          {
+            "backgroundColor": "#6366F1",
+            "borderColor": "#6366F1",
+            "opacity": 1,
+            "paddingHorizontal": 16,
+            "paddingVertical": 12,
+            "width": "100%",
+          },
+          undefined,
+        ]
       }
     >
-      Resolved at
-    </Text>
-    <Text
-      style={
-        {
-          "color": "#E6EAF0",
-          "fontSize": 14,
+      <Animated.View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 8,
+              "justifyContent": "center",
+            },
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
         }
-      }
-    >
-      2026-09-24T10:00:02+00:00
-    </Text>
-  </View>
-  <Pressable
-    onPress={[Function]}
-    style={
-      {
-        "alignItems": "center",
-        "backgroundColor": "#2A2F36",
-        "borderRadius": 12,
-        "marginBottom": 32,
-        "marginTop": 16,
-        "paddingVertical": 14,
-      }
-    }
-  >
-    <Text
-      style={
-        {
-          "color": "#00BFA6",
-          "fontSize": 16,
-          "fontWeight": "600",
-        }
-      }
-    >
-      Back
-    </Text>
-  </Pressable>
-</ScrollView>
+      >
+        <Text
+          numberOfLines={1}
+          style={
+            [
+              {
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              },
+              {
+                "color": "#FFFFFF",
+                "fontSize": 15,
+              },
+            ]
+          }
+        >
+          Done
+        </Text>
+      </Animated.View>
+    </Pressable>
+  </ScrollView>
+</View>
 `;

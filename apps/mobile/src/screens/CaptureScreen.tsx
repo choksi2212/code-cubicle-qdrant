@@ -193,6 +193,9 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
             <PressableScale
               key={p.id}
               onPress={() => setProjectId(p.id)}
+              accessibilityLabel={`Project ${p.name}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: projectId === p.id }}
               style={({ pressed }) => [
                 styles.projectChip,
                 projectId === p.id && styles.projectChipActive,
@@ -209,7 +212,13 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
 
         <View style={styles.shutterWrap}>
           <Animated.View style={[styles.shutterRing, ringStyle]}>
-            <PressableScale onPress={takePhoto} disabled={busy} style={styles.shutterInner}>
+            <PressableScale
+              onPress={takePhoto}
+              disabled={busy}
+              accessibilityLabel="Capture photo"
+              accessibilityRole="button"
+              style={styles.shutterInner}
+            >
               <Icon name="Aperture" size="xl" color={colors.textOnAccent} strokeWidth={1.5} />
             </PressableScale>
           </Animated.View>

@@ -124,7 +124,7 @@ describe('PhotoPreviewScreen', () => {
     expect(json).toContain('Checksum');
   });
 
-  it('renders "JPEG missing" state when the file is gone', async () => {
+  it('renders "Photo not on disk" state when the file is gone', async () => {
     mockedFieldEdge.retrieve.mockResolvedValueOnce([
       { id: 'p1', vector: [0.1], payload: buildPayload() as any },
     ]);
@@ -132,7 +132,7 @@ describe('PhotoPreviewScreen', () => {
     const root = await mountAndLoad(
       <PhotoPreviewScreen photoId="p1" onClose={() => {}} />,
     );
-    expect(JSON.stringify(root.toJSON())).toContain('JPEG missing');
+    expect(JSON.stringify(root.toJSON())).toContain('Photo not on disk');
   });
 
   it('calls onClose when the back button is pressed', async () => {

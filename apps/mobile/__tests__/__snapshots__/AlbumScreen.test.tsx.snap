@@ -1,10 +1,10 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
-<SafeAreaView
+<View
   style={
     {
-      "backgroundColor": "#0E1116",
+      "backgroundColor": "#07080A",
       "flex": 1,
     }
   }
@@ -12,36 +12,74 @@ exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
   <View
     style={
       {
-        "alignItems": "center",
-        "flexDirection": "row",
-        "justifyContent": "space-between",
-        "padding": 16,
-        "paddingTop": 8,
+        "gap": 8,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
       }
     }
   >
     <Pressable
       hitSlop={12}
       onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
     >
-      <Text
+      <Animated.View
         style={
-          {
-            "color": "#00BFA6",
-            "fontSize": 14,
-            "fontWeight": "600",
-          }
+          [
+            undefined,
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
         }
       >
-        ← Back
-      </Text>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 4,
+            }
+          }
+        >
+          <Icon
+            color="#B4BCCC"
+            name="ChevronLeft"
+            size={16}
+            strokeWidth={2}
+          />
+          <Text
+            style={
+              {
+                "color": "#B4BCCC",
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Back
+          </Text>
+        </View>
+      </Animated.View>
     </Pressable>
     <Text
       style={
         {
-          "color": "#E6EAF0",
-          "fontSize": 22,
-          "fontWeight": "bold",
+          "color": "#F7F9FC",
+          "fontSize": 32,
+          "fontWeight": "700",
+          "letterSpacing": -0.6,
+          "lineHeight": 38,
+          "marginTop": 4,
         }
       }
     >
@@ -50,15 +88,15 @@ exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
     <Text
       style={
         {
-          "color": "#8B95A5",
-          "fontSize": 14,
-          "fontWeight": "600",
-          "minWidth": 60,
-          "textAlign": "right",
+          "color": "#B4BCCC",
+          "fontSize": 15,
+          "fontWeight": "400",
+          "lineHeight": 22,
         }
       }
     >
       0
+       photos on this device
     </Text>
   </View>
   <View
@@ -67,42 +105,82 @@ exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
         "alignItems": "center",
         "flex": 1,
         "justifyContent": "center",
-        "padding": 32,
+        "padding": 24,
       }
     }
   >
-    <Text
+    <View
       style={
-        {
-          "color": "#5B6573",
-          "fontSize": 16,
-          "fontWeight": "600",
-        }
+        [
+          {
+            "alignItems": "center",
+            "flex": 1,
+            "gap": 12,
+            "justifyContent": "center",
+            "padding": 32,
+          },
+          undefined,
+        ]
       }
     >
-      No photos yet
-    </Text>
-    <Text
-      style={
-        {
-          "color": "#5B6573",
-          "fontSize": 12,
-          "marginTop": 4,
-          "textAlign": "center",
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "backgroundColor": "#191D24",
+            "borderRadius": 9999,
+            "height": 80,
+            "justifyContent": "center",
+            "marginBottom": 8,
+            "width": 80,
+          }
         }
-      }
-    >
-      Capture a photo to start your album.
-    </Text>
+      >
+        <Icon
+          color="#6366F1"
+          name="Image"
+          size={32}
+          strokeWidth={2}
+        />
+      </View>
+      <Text
+        style={
+          {
+            "color": "#F7F9FC",
+            "fontSize": 20,
+            "fontWeight": "600",
+            "letterSpacing": -0.2,
+            "lineHeight": 26,
+            "textAlign": "center",
+          }
+        }
+      >
+        No photos yet
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#B4BCCC",
+            "fontSize": 15,
+            "fontWeight": "400",
+            "lineHeight": 22,
+            "maxWidth": 320,
+            "textAlign": "center",
+          }
+        }
+      >
+        Capture a photo to start your album.
+      </Text>
+    </View>
   </View>
-</SafeAreaView>
+</View>
 `;
 
 exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = `
-<SafeAreaView
+<View
   style={
     {
-      "backgroundColor": "#0E1116",
+      "backgroundColor": "#07080A",
       "flex": 1,
     }
   }
@@ -110,36 +188,74 @@ exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = 
   <View
     style={
       {
-        "alignItems": "center",
-        "flexDirection": "row",
-        "justifyContent": "space-between",
-        "padding": 16,
-        "paddingTop": 8,
+        "gap": 8,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
       }
     }
   >
     <Pressable
       hitSlop={12}
       onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
     >
-      <Text
+      <Animated.View
         style={
-          {
-            "color": "#00BFA6",
-            "fontSize": 14,
-            "fontWeight": "600",
-          }
+          [
+            undefined,
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
         }
       >
-        ← Back
-      </Text>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 4,
+            }
+          }
+        >
+          <Icon
+            color="#B4BCCC"
+            name="ChevronLeft"
+            size={16}
+            strokeWidth={2}
+          />
+          <Text
+            style={
+              {
+                "color": "#B4BCCC",
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Back
+          </Text>
+        </View>
+      </Animated.View>
     </Pressable>
     <Text
       style={
         {
-          "color": "#E6EAF0",
-          "fontSize": 22,
-          "fontWeight": "bold",
+          "color": "#F7F9FC",
+          "fontSize": 32,
+          "fontWeight": "700",
+          "letterSpacing": -0.6,
+          "lineHeight": 38,
+          "marginTop": 4,
         }
       }
     >
@@ -148,56 +264,308 @@ exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = 
     <Text
       style={
         {
-          "color": "#8B95A5",
-          "fontSize": 14,
-          "fontWeight": "600",
-          "minWidth": 60,
-          "textAlign": "right",
+          "color": "#B4BCCC",
+          "fontSize": 15,
+          "fontWeight": "400",
+          "lineHeight": 22,
         }
       }
     >
-      2
+      1
+       photos on this device
     </Text>
   </View>
-  <SectionList
+  <ScrollView
     contentContainerStyle={
       {
         "paddingBottom": 32,
       }
     }
-    keyExtractor={[Function]}
-    renderItem={[Function]}
-    renderSectionFooter={[Function]}
-    renderSectionHeader={[Function]}
-    sections={
-      [
-        {
-          "data": [
-            {
-              "capturedAt": "2026-09-24T12:00:00.000Z",
-              "lat": null,
-              "lng": null,
-              "photoId": "p1",
-              "photoPath": "proj/dev/p1.jpg",
-            },
-          ],
-          "title": "Today",
-        },
-        {
-          "data": [
-            {
-              "capturedAt": "2026-09-22T12:00:00.000Z",
-              "lat": null,
-              "lng": null,
-              "photoId": "p2",
-              "photoPath": "proj/dev/p1.jpg",
-            },
-          ],
-          "title": "This week",
-        },
-      ]
+    refreshControl={
+      <Unknown
+        colors={
+          [
+            "#6366F1",
+          ]
+        }
+        onRefresh={[Function]}
+        refreshing={false}
+        tintColor="#6366F1"
+      />
     }
-    stickySectionHeadersEnabled={false}
-  />
-</SafeAreaView>
+  >
+    <View
+      style={
+        {
+          "marginTop": 20,
+        }
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "marginBottom": 8,
+            "paddingHorizontal": 20,
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#677289",
+              "fontSize": 11,
+              "fontWeight": "500",
+              "letterSpacing": 1.2,
+              "lineHeight": 14,
+              "textTransform": "uppercase",
+            }
+          }
+        >
+          Today
+        </Text>
+        <View
+          style={
+            {
+              "backgroundColor": "#191D24",
+              "borderRadius": 9999,
+              "paddingHorizontal": 8,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#B4BCCC",
+                "fontSize": 11,
+                "fontVariant": [
+                  "tabular-nums",
+                ],
+                "fontWeight": "500",
+                "letterSpacing": 0.3,
+                "lineHeight": 14,
+              }
+            }
+          >
+            1
+          </Text>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "flexWrap": "wrap",
+            "paddingHorizontal": 12,
+          }
+        }
+      >
+        <Animated.View
+          style={
+            [
+              {
+                "padding": 2,
+                "width": "33.333%",
+              },
+              {
+                "opacity": 0,
+                "transform": [
+                  {
+                    "scale": 0.96,
+                  },
+                ],
+              },
+            ]
+          }
+        >
+          <Pressable
+            hitSlop={8}
+            onPress={[Function]}
+            onPressIn={[Function]}
+            onPressOut={[Function]}
+          >
+            <Animated.View
+              style={
+                [
+                  {
+                    "aspectRatio": 1,
+                    "backgroundColor": "#12151B",
+                    "borderColor": "#22272F",
+                    "borderRadius": 10,
+                    "borderWidth": 1,
+                    "overflow": "hidden",
+                  },
+                  {
+                    "transform": [
+                      {
+                        "scale": {
+                          "_v": 1,
+                          "value": 1,
+                        },
+                      },
+                    ],
+                  },
+                ]
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "file:///mock/proj/dev/p1.jpg",
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+              />
+            </Animated.View>
+          </Pressable>
+        </Animated.View>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "marginTop": 20,
+        }
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "marginBottom": 8,
+            "paddingHorizontal": 20,
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#677289",
+              "fontSize": 11,
+              "fontWeight": "500",
+              "letterSpacing": 1.2,
+              "lineHeight": 14,
+              "textTransform": "uppercase",
+            }
+          }
+        >
+          This week
+        </Text>
+        <View
+          style={
+            {
+              "backgroundColor": "#191D24",
+              "borderRadius": 9999,
+              "paddingHorizontal": 8,
+              "paddingVertical": 2,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#B4BCCC",
+                "fontSize": 11,
+                "fontVariant": [
+                  "tabular-nums",
+                ],
+                "fontWeight": "500",
+                "letterSpacing": 0.3,
+                "lineHeight": 14,
+              }
+            }
+          >
+            1
+          </Text>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "flexDirection": "row",
+            "flexWrap": "wrap",
+            "paddingHorizontal": 12,
+          }
+        }
+      >
+        <Animated.View
+          style={
+            [
+              {
+                "padding": 2,
+                "width": "33.333%",
+              },
+              {
+                "opacity": 0,
+                "transform": [
+                  {
+                    "scale": 0.96,
+                  },
+                ],
+              },
+            ]
+          }
+        >
+          <Pressable
+            hitSlop={8}
+            onPress={[Function]}
+            onPressIn={[Function]}
+            onPressOut={[Function]}
+          >
+            <Animated.View
+              style={
+                [
+                  {
+                    "aspectRatio": 1,
+                    "backgroundColor": "#12151B",
+                    "borderColor": "#22272F",
+                    "borderRadius": 10,
+                    "borderWidth": 1,
+                    "overflow": "hidden",
+                  },
+                  {
+                    "transform": [
+                      {
+                        "scale": {
+                          "_v": 1,
+                          "value": 1,
+                        },
+                      },
+                    ],
+                  },
+                ]
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "file:///mock/proj/dev/p1.jpg",
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+              />
+            </Animated.View>
+          </Pressable>
+        </Animated.View>
+      </View>
+    </View>
+  </ScrollView>
+</View>
 `;

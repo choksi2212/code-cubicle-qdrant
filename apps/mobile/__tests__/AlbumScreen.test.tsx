@@ -148,7 +148,7 @@ describe('AlbumScreen', () => {
     expect(JSON.stringify(root.toJSON())).toContain('No photos yet');
   });
 
-  it('invokes onPhotoPress when a PhotoGrid cell is pressed', async () => {
+  it('invokes onPhotoPress when a thumbnail cell is pressed', async () => {
     const onPhotoPress = jest.fn();
     const now = new Date().toISOString();
     mockedFieldEdge.retrieve.mockResolvedValueOnce([
@@ -157,30 +157,30 @@ describe('AlbumScreen', () => {
     const root = await mountAndLoad(
       <AlbumScreen onBack={() => {}} onPhotoPress={onPhotoPress} />,
     );
-    // The mock SectionList doesn't invoke renderSectionFooter, so we
-    // can't reach the PhotoGrid element directly. Instead, find the
-    // SectionList and inspect its renderSectionFooter — that closure
-    // wraps onPress and produces a PhotoGrid element. Invoking it
-    // gives us a rendered element we can drive.
-    const sectionList = root.root.findByType('SectionList' as any);
-    expect(sectionList).toBeTruthy();
-    const renderSectionFooter = (sectionList.props as any).renderSectionFooter;
-    expect(typeof renderSectionFooter).toBe('function');
-    const photoGridEl = renderSectionFooter({
-      section: { title: 'Today', data: [{ photoId: 'photo-abc' }] },
-    });
-    // photoGridEl is a PhotoGrid element. Render it standalone and
-    // invoke the onPress prop to confirm it wires to our handler.
-    let gridRoot: renderer.ReactTestRenderer | null = null;
-    await act(async () => {
-      gridRoot = renderer.create(photoGridEl);
-    });
-    const flatList = gridRoot!.root.findByProps({ numColumns: 3 });
-    expect(flatList).toBeTruthy();
-    expect((flatList.props as any).onPress).toBe(onPhotoPress);
-    act(() => {
-      (flatList.props as any).onPress('photo-abc');
-    });
+    // Walk the tree to find a Pressable that, when JSON-serialized, contains
+    // the photo id. We use toJSON() to avoid circular refs.
+    let tapped = false;
+    const walk = (node: any) => {
+      if (tapped) return;
+      if (typeof node.props?.onPress === 'function') {
+        let s = '';
+        try {
+          s = JSON.stringify(node.toJSON ? node.toJSON() : node);
+        } catch {
+          s = '';
+        }
+        if (s.includes('photo-abc')) {
+          act(() => node.props.onPress());
+          tapped = true;
+          return;
+        }
+      }
+      const children = node.children || [];
+      for (const child of children) {
+        if (child && typeof child === 'object') walk(child);
+      }
+    };
+    walk(root.root);
     expect(onPhotoPress).toHaveBeenCalledWith('photo-abc');
   });
 });
