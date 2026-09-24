@@ -1,0 +1,23 @@
+# CODEOWNERS — FieldEdge
+# Auto-requests review from the listed owners whenever a PR touches the
+# matched paths. Pattern syntax matches GitHub's CODEOWNERS spec:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything else
+*       @choksi2212
+
+# Mobile app — JS/TS/native bridge
+/apps/mobile/                       @choksi2212
+
+# Rust core (CLIP bindings, WAL, qdrant-client)
+/packages/field-edge-rust/          @choksi2212
+
+# Sync API (FastAPI)
+/apps/sync-api/                     @choksi2212
+
+# CI / release workflows pin the platform owner so infra changes get eyes
+/.github/workflows/                 @choksi2212
+/.github/CODEOWNERS                 @choksi2212
+
+# React Native wrapper package — owned with mobile
+/packages/field-edge-react-native/  @choksi2212

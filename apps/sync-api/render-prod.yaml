@@ -1,0 +1,46 @@
+# Render Blueprint — FieldEdge sync API (production)
+#
+# Deploy: https://dashboard.render.com → New → Blueprint → point at this repo
+#          → select this file (apps/sync-api/render-prod.yaml).
+# Or via CLI:
+#   render blueprint launch --path apps/sync-api/render-prod.yaml
+#
+# Production is auto-deployed on a Git tag push (see .github/workflows/release.yml).
+# For routine staging work, use render-staging.yaml.
+
+services:
+  - type: web
+    name: field-edge-sync-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    rootDir: apps/sync-api
+    plan: free
+    region: oregon
+    # Lightweight liveness — fails fast if the process is wedged.
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+
+      # Environment flag
+      - key: ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+
+      # Qdrant (production cluster)
+      - key: QDRANT_COLLECTION
+        value: field_edge_central
+
+      # Secrets — set these in the Render dashboard before first deploy.
+      # Do NOT commit values to git.
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

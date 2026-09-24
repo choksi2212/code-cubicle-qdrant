@@ -1,0 +1,105 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# A tag build should run alone — don't cancel it for anything.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-apk:
+    name: build release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup pnpm 9
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Java 17 (Android Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Bundle JS for Android (release)
+        working-directory: apps/mobile
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Assemble release APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK artifact (GitHub)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.ref_name }}
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Attach APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          fail_on_unmatched_files: true
+
+  # ── Firebase App Distribution (optional, gated) ──────────────────────
+  # Off by default. Set the repo secret `FIREBASE_APP_ID` (the Firebase App
+  # Distribution app id, e.g. 1:1234567890:android:abcdef) AND add the
+  # `FIREBASE_TOKEN` secret (output of `firebase login:ci`) to enable.
+  firebase-distribute:
+    name: distribute to Firebase (optional)
+    needs: build-apk
+    if: env.FIREBASE_APP_ID != '' && env.FIREBASE_TOKEN != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-${{ github.ref_name }}
+          path: dist
+
+      - name: Install firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Upload to Firebase App Distribution
+        run: |
+          firebase appdistribution:distribute \
+            dist/app-release.apk \
+            --app "$FIREBASE_APP_ID" \
+            --token "$FIREBASE_TOKEN" \
+            --release-notes "GitHub release ${{ github.ref_name }}" \
+            --groups "testers"
