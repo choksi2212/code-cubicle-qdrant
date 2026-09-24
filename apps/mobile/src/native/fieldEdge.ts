@@ -17,6 +17,7 @@ interface NativeBridge {
   resolveConflict(localJson: string, remoteJson: string): Promise<{ status: 'ok' | 'err'; value?: ConflictDecision; code?: string; message?: string }>;
   walAppend(walPath: string, entryJson: string): Promise<{ status: 'ok' | 'err'; value?: { seq: number }; code?: string; message?: string }>;
   walReadAll(walPath: string): Promise<{ status: 'ok' | 'err'; value?: WalEntry[]; code?: string; message?: string }>;
+  walClear(walPath: string): Promise<{ status: 'ok' | 'err'; value?: { cleared: boolean; removed_bytes: number }; code?: string; message?: string }>;
   version(): Promise<{ status: string; value?: { crate: string; version: string; rust_version: string; features: Record<string, boolean> } }>;
   checksum(vector: number[]): Promise<{ status: string; value?: { checksum: string } }>;
 }
@@ -156,8 +157,8 @@ class FieldEdgeClient {
     return resp.value!;
   }
 
-  async walAppend(walPath: string, entry: WalEntry): Promise<{ seq: number }> {
-    const resp = await native.walAppend(walPath, JSON.stringify(entry));
+  async walAppend(walPath: string, entryJson: string): Promise<{ seq: number }> {
+    const resp = await native.walAppend(walPath, entryJson);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? { seq: 0 };
   }
@@ -166,6 +167,12 @@ class FieldEdgeClient {
     const resp = await native.walReadAll(walPath);
     if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
     return resp.value ?? [];
+  }
+
+  async walClear(walPath: string): Promise<{ cleared: boolean; removed_bytes: number }> {
+    const resp = await native.walClear(walPath);
+    if (resp.status === 'err') throw new Error(`${resp.code}: ${resp.message}`);
+    return resp.value ?? { cleared: false, removed_bytes: 0 };
   }
 
   async version(): Promise<{ status: string; value?: { crate: string; version: string; rust_version: string; features: Record<string, boolean> } }> {

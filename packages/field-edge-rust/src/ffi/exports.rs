@@ -9,6 +9,7 @@ use crate::crypto::checksum::vector_checksum;
 use crate::edge::{open_shard as open_shard_impl, EdgeError, EdgeOps, Point, QueryRequest};
 use crate::sync::diff::compute_sync_diff;
 use crate::wal::log::{WalEntry, WalReader, WalWriter};
+use std::fs::OpenOptions;
 use std::path::Path;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -160,7 +161,15 @@ pub fn checksum(vector_json: String) -> String {
 pub fn wal_append(wal_path: String, entry_json: String) -> String {
     let entry: WalEntry = match serde_json::from_str(&entry_json) {
         Ok(e) => e,
-        Err(e) => return err("PARSE_ERROR", &e.to_string()),
+        Err(e) => {
+            // Hex-dump first 320 bytes so we can see hidden chars (BOM, escapes).
+            let hex: String = entry_json.bytes().take(320).map(|b| format!("{:02x}", b)).collect();
+            return err(
+                "PARSE_ERROR",
+                &format!("line {} col {}: {} | len={} | hex={}",
+                    e.line(), e.column(), e, entry_json.len(), hex),
+            );
+        }
     };
 
     let path = Path::new(&wal_path);
@@ -185,6 +194,30 @@ pub fn wal_read_all(wal_path: String) -> String {
 
     let entries: Vec<_> = reader.filter_map(|r| r.ok()).collect();
     ok_raw(entries)
+}
+
+/// Truncate the WAL file (remove all entries).
+///
+/// Used by sync after a successful upload round so the WAL doesn't keep
+/// re-uploading the same pending entries forever. The Rust shard still
+/// holds the points; the sync API dedups re-uploads by ID.
+pub fn wal_clear(wal_path: String) -> String {
+    let path = Path::new(&wal_path);
+    // fsync + truncate: preserves the file handle's position semantics so
+    // a concurrent wal_append keeps appending after the clear.
+    let result = OpenOptions::new()
+        .write(true)
+        .open(path)
+        .and_then(|mut f| {
+            let len = f.metadata()?.len();
+            f.set_len(0)?;
+            f.sync_data()?;
+            Ok(len)
+        });
+    match result {
+        Ok(removed_bytes) => ok(serde_json::json!({"cleared": true, "removed_bytes": removed_bytes})),
+        Err(e) => err("WAL_ERROR", &e.to_string()),
+    }
 }
 
 /// Get crate version + metadata.
@@ -260,6 +293,7 @@ c_abi_export!(fe_resolve_conflict, resolve_conflict, local_json: String, remote_
 c_abi_export!(fe_checksum, checksum, vector_json: String);
 c_abi_export!(fe_wal_append, wal_append, wal_path: String, entry_json: String);
 c_abi_export!(fe_wal_read_all, wal_read_all, wal_path: String);
+c_abi_export!(fe_wal_clear, wal_clear, wal_path: String);
 
 #[no_mangle]
 pub extern "C" fn fe_version() -> *mut std::os::raw::c_char {

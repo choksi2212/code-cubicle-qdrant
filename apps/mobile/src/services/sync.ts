@@ -156,6 +156,21 @@ export async function runSync(
       onProgress?.(`Pull failed: ${String(e)}`);
       metrics.errors++;
     }
+
+    // 4. Compact the WAL. Drop everything we attempted to upload (whether
+    //    accepted, conflict-resolved, or permanently rejected — the server
+    //    dedups by ID, so re-uploads are free, and permanently-rejected
+    //    entries like pre-UUID ULIDs would just keep erroring on every
+    //    sync otherwise). New captures will append fresh entries.
+    try {
+      const result = await fieldEdge.walClear(WAL_PATH);
+      onProgress?.(
+        `WAL compacted (${result.removed_bytes} bytes cleared)`,
+      );
+    } catch (e) {
+      onProgress?.(`WAL compact failed: ${String(e)}`);
+      metrics.errors++;
+    }
   } catch (e) {
     onProgress?.(`Sync failed: ${String(e)}`);
     metrics.errors++;

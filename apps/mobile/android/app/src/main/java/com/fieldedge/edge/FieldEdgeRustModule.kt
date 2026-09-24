@@ -336,6 +336,8 @@ class FieldEdgeRustModule(reactContext: ReactApplicationContext) :
     fun walAppend(walPath: String, entryJson: String, promise: Promise) {
         scope.launch {
             try {
+                val hex: String = entryJson.toByteArray(Charsets.UTF_8).take(280).joinToString("") { "%02x".format(it) }
+                Log.i(TAG, "walAppend entryJson (${entryJson.length} bytes): $hex")
                 val result = withContext(Dispatchers.IO) { call2("fe_wal_append", walPath, entryJson) }
                 promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
             } catch (e: Throwable) {
@@ -352,6 +354,18 @@ class FieldEdgeRustModule(reactContext: ReactApplicationContext) :
                 promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
             } catch (e: Throwable) {
                 promise.reject("WAL_READ_FAILED", e.message, e)
+            }
+        }
+    }
+
+    @ReactMethod
+    fun walClear(walPath: String, promise: Promise) {
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { call1("fe_wal_clear", walPath) }
+                promise.resolve(jsonToWritableMap(result.ifEmpty { errorResponse("null result") }))
+            } catch (e: Throwable) {
+                promise.reject("WAL_CLEAR_FAILED", e.message, e)
             }
         }
     }
