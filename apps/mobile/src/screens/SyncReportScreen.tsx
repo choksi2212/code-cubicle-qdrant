@@ -110,6 +110,7 @@ export function SyncReportScreen({ report, onClose, onOpenConflict }: Props) {
             <PressableScale
               key={i}
               onPress={() => onOpenConflict?.(c.photo_id)}
+              accessibilityLabel={`Conflict ${c.photo_id}`}
               style={({ pressed }) => [styles.conflictRow, pressed && { backgroundColor: colors.surfaceElevated }]}
             >
               <View style={styles.conflictThumb}>
