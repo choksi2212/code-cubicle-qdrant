@@ -174,16 +174,12 @@ function MetricTile({
 
 function CountUp({ target }: { target: number }) {
   const v = useSharedValue(0);
-  useEffect(() => {
-    v.value = withTiming(target, { duration: 600 });
-  }, [target, v]);
   const [display, setDisplay] = React.useState(0);
   useEffect(() => {
-    const id = setInterval(() => {
-      setDisplay(Math.round(v.value));
-    }, 60);
-    return () => clearInterval(id);
-  }, [v]);
+    v.value = withTiming(target, { duration: 600 });
+    const t = setTimeout(() => setDisplay(target), 620);
+    return () => clearTimeout(t);
+  }, [target, v]);
   return <Text style={styles.metricValue}>{display}</Text>;
 }
 

@@ -1,0 +1,1054 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`OnboardingScreen matches the locked layout snapshot 1`] = `
+<View
+  style={
+    [
+      {
+        "backgroundColor": "#07080A",
+        "flex": 1,
+      },
+      {
+        "paddingTop": 0,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "space-between",
+        "paddingHorizontal": 20,
+        "paddingVertical": 16,
+      }
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#F7F9FC",
+          "fontSize": 20,
+          "fontWeight": "600",
+          "letterSpacing": -0.2,
+          "lineHeight": 26,
+        }
+      }
+    >
+      FieldEdge
+    </Text>
+    <Pressable
+      hitSlop={12}
+      onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
+    >
+      <Animated.View
+        style={
+          [
+            undefined,
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#677289",
+              "fontSize": 15,
+              "fontWeight": "600",
+              "lineHeight": 22,
+            }
+          }
+        >
+          Skip
+        </Text>
+      </Animated.View>
+    </Pressable>
+  </View>
+  <Animated.ScrollView
+    horizontal={true}
+    onScroll={[Function]}
+    pagingEnabled={true}
+    scrollEventThrottle={16}
+    showsHorizontalScrollIndicator={false}
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View
+      style={
+        [
+          {
+            "paddingHorizontal": 24,
+            "paddingTop": 24,
+          },
+          {
+            "width": 360,
+          },
+        ]
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "height": 200,
+            "justifyContent": "center",
+            "marginBottom": 24,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "height": 160,
+              "justifyContent": "center",
+              "width": 160,
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#12151B",
+                  "borderColor": "#22272F",
+                  "borderRadius": 9999,
+                  "borderWidth": 1,
+                  "height": 96,
+                  "justifyContent": "center",
+                  "position": "absolute",
+                  "width": 96,
+                },
+                {
+                  "transform": [
+                    {
+                      "translateX": 24,
+                    },
+                    {
+                      "translateY": 8,
+                    },
+                  ],
+                },
+              ]
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Sparkles"
+              size={24}
+              strokeWidth={2}
+            />
+          </View>
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#12151B",
+                  "borderColor": "#22272F",
+                  "borderRadius": 9999,
+                  "borderWidth": 1,
+                  "height": 96,
+                  "justifyContent": "center",
+                  "position": "absolute",
+                  "width": 96,
+                },
+                {
+                  "transform": [
+                    {
+                      "translateX": 0,
+                    },
+                    {
+                      "translateY": 0,
+                    },
+                  ],
+                },
+              ]
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Aperture"
+              size={24}
+              strokeWidth={2}
+            />
+          </View>
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#12151B",
+                  "borderColor": "#22272F",
+                  "borderRadius": 9999,
+                  "borderWidth": 1,
+                  "height": 96,
+                  "justifyContent": "center",
+                  "position": "absolute",
+                  "width": 96,
+                },
+                {
+                  "transform": [
+                    {
+                      "translateX": 48,
+                    },
+                    {
+                      "translateY": 16,
+                    },
+                  ],
+                },
+              ]
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Database"
+              size={24}
+              strokeWidth={2}
+            />
+          </View>
+        </View>
+      </View>
+      <Text
+        style={
+          {
+            "color": "#F7F9FC",
+            "fontSize": 32,
+            "fontWeight": "700",
+            "letterSpacing": -0.6,
+            "lineHeight": 38,
+            "marginBottom": 12,
+          }
+        }
+      >
+        Field intelligence, in your pocket
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#B4BCCC",
+            "fontSize": 15,
+            "fontWeight": "400",
+            "lineHeight": 22,
+            "marginBottom": 24,
+          }
+        }
+      >
+        Take photos in the field. AI-powered semantic search across every frame. Sync to the cloud when you are ready.
+      </Text>
+      <ScrollView
+        contentContainerStyle={
+          {
+            "gap": 12,
+            "paddingRight": 24,
+          }
+        }
+        horizontal={true}
+        showsHorizontalScrollIndicator={false}
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "gap": 8,
+              "marginRight": 8,
+              "paddingHorizontal": 12,
+              "paddingVertical": 12,
+              "width": 96,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 9999,
+                "height": 40,
+                "justifyContent": "center",
+                "width": 40,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Aperture"
+              size={20}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Capture
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "gap": 8,
+              "marginRight": 8,
+              "paddingHorizontal": 12,
+              "paddingVertical": 12,
+              "width": 96,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 9999,
+                "height": 40,
+                "justifyContent": "center",
+                "width": 40,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Sparkles"
+              size={20}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Embed
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "gap": 8,
+              "marginRight": 8,
+              "paddingHorizontal": 12,
+              "paddingVertical": 12,
+              "width": 96,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 9999,
+                "height": 40,
+                "justifyContent": "center",
+                "width": 40,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Database"
+              size={20}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Store
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "gap": 8,
+              "marginRight": 8,
+              "paddingHorizontal": 12,
+              "paddingVertical": 12,
+              "width": 96,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 9999,
+                "height": 40,
+                "justifyContent": "center",
+                "width": 40,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Upload"
+              size={20}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+              }
+            }
+          >
+            Sync
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
+    <View
+      style={
+        [
+          {
+            "paddingHorizontal": 24,
+            "paddingTop": 24,
+          },
+          {
+            "width": 360,
+          },
+        ]
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "height": 200,
+            "justifyContent": "center",
+            "marginBottom": 24,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "justifyContent": "center",
+            }
+          }
+        >
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#12151B",
+                  "borderColor": "#22272F",
+                  "borderRadius": 9999,
+                  "borderWidth": 1,
+                  "height": 96,
+                  "justifyContent": "center",
+                  "position": "absolute",
+                  "width": 96,
+                },
+                {
+                  "height": 128,
+                  "left": 0,
+                  "marginLeft": 0,
+                  "position": "relative",
+                  "top": 0,
+                  "width": 128,
+                },
+              ]
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Sparkles"
+              size={32}
+              strokeWidth={1.5}
+            />
+          </View>
+        </View>
+      </View>
+      <Text
+        style={
+          {
+            "color": "#F7F9FC",
+            "fontSize": 32,
+            "fontWeight": "700",
+            "letterSpacing": -0.6,
+            "lineHeight": 38,
+            "marginBottom": 12,
+          }
+        }
+      >
+        How it works
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#B4BCCC",
+            "fontSize": 15,
+            "fontWeight": "400",
+            "lineHeight": 22,
+            "marginBottom": 24,
+          }
+        }
+      >
+        Every photo is processed locally on your device. Nothing leaves until you tap Sync.
+      </Text>
+      <View
+        style={
+          {
+            "gap": 12,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 12,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 10,
+                "height": 32,
+                "justifyContent": "center",
+                "width": 32,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Sparkles"
+              size={16}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 15,
+                "fontWeight": "400",
+                "lineHeight": 22,
+              }
+            }
+          >
+            On-device AI — no cloud round-trip
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 12,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 10,
+                "height": 32,
+                "justifyContent": "center",
+                "width": 32,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Lock"
+              size={16}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 15,
+                "fontWeight": "400",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Encrypted at rest via Android Keystore
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 12,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 10,
+                "height": 32,
+                "justifyContent": "center",
+                "width": 32,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Upload"
+              size={16}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 15,
+                "fontWeight": "400",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Syncs over WiFi when you ask
+          </Text>
+        </View>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "backgroundColor": "#12151B",
+              "borderColor": "#22272F",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 12,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "rgba(99,102,241,0.16)",
+                "borderRadius": 10,
+                "height": 32,
+                "justifyContent": "center",
+                "width": 32,
+              }
+            }
+          >
+            <Icon
+              color="#6366F1"
+              name="Search"
+              size={16}
+              strokeWidth={2}
+            />
+          </View>
+          <Text
+            style={
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 15,
+                "fontWeight": "400",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Search by meaning, not filename
+          </Text>
+        </View>
+      </View>
+    </View>
+    <View
+      style={
+        [
+          {
+            "paddingHorizontal": 24,
+            "paddingTop": 24,
+          },
+          {
+            "width": 360,
+          },
+        ]
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "height": 200,
+            "justifyContent": "center",
+            "marginBottom": 24,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "width": "100%",
+            }
+          }
+        >
+          <Pressable
+            hitSlop={8}
+            onPress={[Function]}
+            onPressIn={[Function]}
+            onPressOut={[Function]}
+          >
+            <Animated.View
+              style={
+                [
+                  [Function],
+                  {
+                    "transform": [
+                      {
+                        "scale": {
+                          "_v": 1,
+                          "value": 1,
+                        },
+                      },
+                    ],
+                  },
+                ]
+              }
+            >
+              <View
+                style={
+                  {
+                    "alignItems": "center",
+                    "backgroundColor": "rgba(99,102,241,0.16)",
+                    "borderRadius": 9999,
+                    "height": 40,
+                    "justifyContent": "center",
+                    "width": 40,
+                  }
+                }
+              >
+                <Icon
+                  color="#6366F1"
+                  name="Aperture"
+                  size={20}
+                  strokeWidth={2}
+                />
+              </View>
+              <View
+                style={
+                  {
+                    "flex": 1,
+                  }
+                }
+              >
+                <Text
+                  style={
+                    {
+                      "color": "#F7F9FC",
+                      "fontSize": 15,
+                      "fontWeight": "600",
+                      "lineHeight": 22,
+                    }
+                  }
+                >
+                  Camera
+                </Text>
+                <Text
+                  style={
+                    {
+                      "color": "#677289",
+                      "fontSize": 13,
+                      "fontWeight": "400",
+                      "lineHeight": 18,
+                      "marginTop": 2,
+                    }
+                  }
+                >
+                  Tap to grant
+                </Text>
+              </View>
+              <Icon
+                color="#677289"
+                name="ChevronRight"
+                size={20}
+                strokeWidth={2}
+              />
+            </Animated.View>
+          </Pressable>
+          <View
+            style={
+              [
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#12151B",
+                  "borderColor": "#22272F",
+                  "borderRadius": 10,
+                  "borderWidth": 1,
+                  "flexDirection": "row",
+                  "gap": 12,
+                  "paddingHorizontal": 16,
+                  "paddingVertical": 16,
+                },
+                {
+                  "marginTop": 12,
+                },
+              ]
+            }
+          >
+            <View
+              style={
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "rgba(99,102,241,0.16)",
+                  "borderRadius": 9999,
+                  "height": 40,
+                  "justifyContent": "center",
+                  "width": 40,
+                }
+              }
+            >
+              <Icon
+                color="#6366F1"
+                name="MapPin"
+                size={20}
+                strokeWidth={2}
+              />
+            </View>
+            <View
+              style={
+                {
+                  "flex": 1,
+                }
+              }
+            >
+              <Text
+                style={
+                  {
+                    "color": "#F7F9FC",
+                    "fontSize": 15,
+                    "fontWeight": "600",
+                    "lineHeight": 22,
+                  }
+                }
+              >
+                Location
+              </Text>
+              <Text
+                style={
+                  {
+                    "color": "#677289",
+                    "fontSize": 13,
+                    "fontWeight": "400",
+                    "lineHeight": 18,
+                    "marginTop": 2,
+                  }
+                }
+              >
+                Asked with camera
+              </Text>
+            </View>
+            <Icon
+              color="#677289"
+              name="ChevronRight"
+              size={20}
+              strokeWidth={2}
+            />
+          </View>
+        </View>
+      </View>
+      <Text
+        style={
+          {
+            "color": "#F7F9FC",
+            "fontSize": 32,
+            "fontWeight": "700",
+            "letterSpacing": -0.6,
+            "lineHeight": 38,
+            "marginBottom": 12,
+          }
+        }
+      >
+        Grant permissions
+      </Text>
+      <Text
+        style={
+          {
+            "color": "#B4BCCC",
+            "fontSize": 15,
+            "fontWeight": "400",
+            "lineHeight": 22,
+            "marginBottom": 24,
+          }
+        }
+      >
+        We need two permissions to capture and tag photos. You can revoke either one later in Android Settings.
+      </Text>
+    </View>
+  </Animated.ScrollView>
+  <View
+    style={
+      [
+        {
+          "alignItems": "stretch",
+          "gap": 16,
+          "paddingHorizontal": 24,
+          "paddingTop": 16,
+        },
+        {
+          "paddingBottom": 16,
+        },
+      ]
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "gap": 4,
+          "justifyContent": "center",
+        }
+      }
+    >
+      <Animated.View
+        style={
+          [
+            {
+              "borderRadius": 9999,
+              "height": 4,
+            },
+            {
+              "backgroundColor": "#6366F1",
+            },
+            {
+              "opacity": 0,
+              "width": 0,
+            },
+          ]
+        }
+      />
+      <Animated.View
+        style={
+          [
+            {
+              "borderRadius": 9999,
+              "height": 4,
+            },
+            {
+              "backgroundColor": "#6366F1",
+            },
+            {
+              "opacity": 0,
+              "width": 0,
+            },
+          ]
+        }
+      />
+      <Animated.View
+        style={
+          [
+            {
+              "borderRadius": 9999,
+              "height": 4,
+            },
+            {
+              "backgroundColor": "#6366F1",
+            },
+            {
+              "opacity": 0,
+              "width": 0,
+            },
+          ]
+        }
+      />
+    </View>
+  </View>
+</View>
+`;

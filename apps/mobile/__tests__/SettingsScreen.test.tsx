@@ -106,10 +106,10 @@ describe('SettingsScreen', () => {
     expect(json).toContain('Server URL');
     expect(json).toContain('Photo cap');
     expect(json).toContain('Account');
-    expect(json).toContain('Storage usage');
+    expect(json).toContain('Storage');
     expect(json).toContain('About');
     expect(json).toContain('Log out');
-    expect(json).toContain('Built for Paytm × Qdrant hackathon');
+    expect(json).toContain('Built for the Paytm × Qdrant hackathon');
   });
 
   it('renders all four sync-interval chips', () => {

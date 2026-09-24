@@ -51,7 +51,7 @@ describe('Icon', () => {
     expect(JSON.stringify(tree)).toContain('"strokeWidth":3');
   });
 
-  it('renders every icon name documented in the Icon spec', () => {
+  it('renders every canonical icon name documented in the Icon spec', () => {
     const names = [
       'Camera', 'RefreshCw', 'Settings', 'Sliders', 'SlidersHorizontal',
       'ChevronLeft', 'ChevronRight', 'ChevronDown', 'ChevronUp',
@@ -63,11 +63,20 @@ describe('Icon', () => {
       'Eye', 'Heart', 'Star', 'Bookmark', 'Share', 'Download', 'Upload',
       'Filter', 'Loader', 'CircleCheck', 'TriangleAlert', 'CircleX',
       'ArrowLeft', 'ArrowRight', 'Ellipsis', 'Smartphone', 'Shield',
-      'Loader2', 'CheckCircle2', 'AlertTriangle', 'XCircle', 'MoreHorizontal',
+      'Power', 'HardDrive', 'Server',
+      // Aliases (Loader2, CheckCircle2, AlertTriangle, XCircle, MoreHorizontal)
+      // map to canonical names internally — covered by the alias test below.
     ];
     for (const name of names) {
       const tree = renderer.create(<Icon name={name as any} />).toJSON();
       expect(JSON.stringify(tree)).toContain(name);
+    }
+    // Aliases render their canonical counterpart — verify they're still
+    // callable via the alias name without crashing.
+    const aliases = ['Loader2', 'CheckCircle2', 'AlertTriangle', 'XCircle', 'MoreHorizontal'];
+    for (const alias of aliases) {
+      const tree = renderer.create(<Icon name={alias as any} />).toJSON();
+      expect(tree).toBeTruthy();
     }
     // sanity: helper consumed
     expect(nameOf).toBeTruthy();

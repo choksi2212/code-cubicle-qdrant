@@ -31,6 +31,7 @@ const mkAnimatedComponent = (name) => (props) =>
 const Animated = {
   View: mkAnimatedComponent('Animated.View'),
   Text: mkAnimatedComponent('Animated.Text'),
+  ScrollView: mkAnimatedComponent('Animated.ScrollView'),
   createAnimatedComponent: (C) =>
     mkAnimatedComponent('Animated.' + (C.displayName || C.name || 'Component')),
 };

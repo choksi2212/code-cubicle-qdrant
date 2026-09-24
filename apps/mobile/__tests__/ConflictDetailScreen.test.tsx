@@ -81,7 +81,7 @@ describe('ConflictDetailScreen', () => {
     );
   });
 
-  it('renders the three panels once the fetch resolves', async () => {
+  it('renders the winner banner + side-by-side panels once the fetch resolves', async () => {
     mockFetchDetail.mockResolvedValueOnce(SAMPLE_DETAIL);
     let tree: renderer.ReactTestRenderer | null = null;
     await act(async () => {
@@ -93,10 +93,9 @@ describe('ConflictDetailScreen', () => {
       );
     });
     const json = JSON.stringify(tree!.toJSON());
+    expect(json).toContain('Local version won');
     expect(json).toContain('Local');
     expect(json).toContain('Remote');
-    expect(json).toContain('Resolution');
-    expect(json).toContain('local'); // winner badge text
     expect(json).toContain('enrichment_text');
     expect(json).toContain('tags_v2');
   });
@@ -118,7 +117,7 @@ describe('ConflictDetailScreen', () => {
     expect(json).toContain('Back');
   });
 
-  it('renders "No local copy" when local payload is null', async () => {
+  it('renders "Unavailable" when local payload is null', async () => {
     mockFetchDetail.mockResolvedValueOnce({
       ...SAMPLE_DETAIL,
       local: null,
@@ -135,8 +134,8 @@ describe('ConflictDetailScreen', () => {
       );
     });
     const json = JSON.stringify(tree!.toJSON());
-    expect(json).toContain('No local copy');
-    expect(json).toContain('remote');
+    expect(json).toContain('Unavailable');
+    expect(json).toContain('Remote version won');
   });
 
   it('matches the locked layout snapshot once the fetch resolves', async () => {

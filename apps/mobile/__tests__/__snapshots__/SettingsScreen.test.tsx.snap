@@ -1,324 +1,514 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`SettingsScreen matches the locked layout snapshot 1`] = `
-<SafeAreaView
+<ScrollView
+  contentContainerStyle={
+    {
+      "paddingBottom": 32,
+    }
+  }
   style={
     {
-      "backgroundColor": "#0E1116",
+      "backgroundColor": "#07080A",
       "flex": 1,
     }
   }
 >
-  <ScrollView
-    contentContainerStyle={
+  <View
+    style={
       {
-        "paddingBottom": 48,
+        "gap": 8,
+        "marginBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
       }
     }
   >
-    <View
+    <Pressable
+      hitSlop={12}
+      onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
+    >
+      <Animated.View
+        style={
+          [
+            undefined,
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 4,
+            }
+          }
+        >
+          <Icon
+            color="#B4BCCC"
+            name="ChevronLeft"
+            size={16}
+            strokeWidth={2}
+          />
+          <Text
+            style={
+              {
+                "color": "#B4BCCC",
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              }
+            }
+          >
+            Back
+          </Text>
+        </View>
+      </Animated.View>
+    </Pressable>
+    <Text
       style={
         {
-          "alignItems": "center",
-          "flexDirection": "row",
-          "justifyContent": "space-between",
+          "color": "#F7F9FC",
+          "fontSize": 32,
+          "fontWeight": "700",
+          "letterSpacing": -0.6,
+          "lineHeight": 38,
+          "marginTop": 4,
+        }
+      }
+    >
+      Settings
+    </Text>
+  </View>
+  <Text
+    style={
+      {
+        "color": "#677289",
+        "fontSize": 11,
+        "fontWeight": "500",
+        "letterSpacing": 1.2,
+        "lineHeight": 14,
+        "marginBottom": 8,
+        "marginTop": 20,
+        "paddingHorizontal": 20,
+        "textTransform": "uppercase",
+      }
+    }
+  >
+    Sync
+  </Text>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#12151B",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#22272F",
+          "borderWidth": 1,
+        },
+        {
+          "elevation": 2,
+          "shadowColor": "#000",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.18,
+          "shadowRadius": 4,
+        },
+        {
           "padding": 16,
-          "paddingTop": 8,
+        },
+        undefined,
+      ]
+    }
+  >
+    <View
+      accessibilityRole="tablist"
+      style={
+        {
+          "backgroundColor": "#0B0D11",
+          "borderRadius": 10,
+          "flexDirection": "row",
+          "gap": 2,
+          "padding": 4,
         }
       }
     >
       <Pressable
+        accessibilityRole="tab"
+        accessibilityState={
+          {
+            "selected": true,
+          }
+        }
+        onLayout={[Function]}
         onPress={[Function]}
         style={
           {
-            "paddingHorizontal": 8,
-            "paddingVertical": 6,
+            "alignItems": "center",
+            "borderRadius": 6,
+            "flex": 1,
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "center",
+            "paddingHorizontal": 12,
+            "paddingVertical": 8,
           }
         }
       >
+        <Icon
+          color="#F7F9FC"
+          name="Power"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
+          style={
+            [
+              {
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "center",
+              },
+              {
+                "color": "#F7F9FC",
+              },
+            ]
+          }
+        >
+          Manual
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={
+          {
+            "selected": false,
+          }
+        }
+        onLayout={[Function]}
+        onPress={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "borderRadius": 6,
+            "flex": 1,
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "center",
+            "paddingHorizontal": 12,
+            "paddingVertical": 8,
+          }
+        }
+      >
+        <Icon
+          color="#677289"
+          name="Clock"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
+          style={
+            [
+              {
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "center",
+              },
+              {
+                "color": "#677289",
+              },
+            ]
+          }
+        >
+          15m
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={
+          {
+            "selected": false,
+          }
+        }
+        onLayout={[Function]}
+        onPress={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "borderRadius": 6,
+            "flex": 1,
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "center",
+            "paddingHorizontal": 12,
+            "paddingVertical": 8,
+          }
+        }
+      >
+        <Icon
+          color="#677289"
+          name="Clock"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
+          style={
+            [
+              {
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "center",
+              },
+              {
+                "color": "#677289",
+              },
+            ]
+          }
+        >
+          1h
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={
+          {
+            "selected": false,
+          }
+        }
+        onLayout={[Function]}
+        onPress={[Function]}
+        style={
+          {
+            "alignItems": "center",
+            "borderRadius": 6,
+            "flex": 1,
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "center",
+            "paddingHorizontal": 12,
+            "paddingVertical": 8,
+          }
+        }
+      >
+        <Icon
+          color="#677289"
+          name="Clock"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
+          style={
+            [
+              {
+                "fontSize": 13,
+                "fontWeight": "600",
+                "lineHeight": 18,
+                "textAlign": "center",
+              },
+              {
+                "color": "#677289",
+              },
+            ]
+          }
+        >
+          6h
+        </Text>
+      </Pressable>
+    </View>
+    <Text
+      style={
+        {
+          "color": "#677289",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "lineHeight": 18,
+          "marginTop": 8,
+        }
+      }
+    >
+      Manual disables background sync. Intervals run on WiFi with battery awareness.
+    </Text>
+    <View
+      style={
+        {
+          "gap": 8,
+          "marginTop": 12,
+        }
+      }
+    >
+      <View
+        style={
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "paddingVertical": 4,
+          }
+        }
+      >
+        <Icon
+          color="#677289"
+          name="Clock"
+          size={16}
+          strokeWidth={2}
+        />
         <Text
           style={
             {
-              "color": "#00BFA6",
-              "fontSize": 14,
-              "fontWeight": "600",
+              "color": "#677289",
+              "flex": 1,
+              "fontSize": 13,
+              "fontWeight": "400",
+              "lineHeight": 18,
             }
           }
         >
-          ← Back
+          Last sync
         </Text>
-      </Pressable>
-      <Text
-        style={
-          {
-            "color": "#E6EAF0",
-            "fontSize": 22,
-            "fontWeight": "bold",
+        <Text
+          style={
+            {
+              "color": "#F7F9FC",
+              "fontSize": 13,
+              "fontVariant": [
+                "tabular-nums",
+              ],
+              "fontWeight": "600",
+              "lineHeight": 18,
+            }
           }
-        }
-      >
-        Settings
-      </Text>
+        >
+          never
+        </Text>
+      </View>
       <View
         style={
           {
-            "width": 60,
-          }
-        }
-      />
-    </View>
-    <View
-      style={
-        {
-          "marginTop": 16,
-          "paddingHorizontal": 16,
-        }
-      }
-    >
-      <Text
-        style={
-          {
-            "color": "#8B95A5",
-            "fontSize": 12,
-            "letterSpacing": 1,
-            "marginBottom": 8,
-            "textTransform": "uppercase",
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "paddingVertical": 4,
           }
         }
       >
-        Sync
-      </Text>
-      <View
-        style={
-          {
-            "backgroundColor": "#1A1F26",
-            "borderRadius": 12,
-            "gap": 12,
-            "padding": 16,
-          }
-        }
-      >
-        <View
+        <Icon
+          color="#677289"
+          name="RefreshCw"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
           style={
             {
-              "flexDirection": "row",
-              "flexWrap": "wrap",
-              "gap": 8,
+              "color": "#677289",
+              "flex": 1,
+              "fontSize": 13,
+              "fontWeight": "400",
+              "lineHeight": 18,
             }
           }
         >
-          <Pressable
-            onPress={[Function]}
-            style={
-              [
-                {
-                  "backgroundColor": "#2A2F36",
-                  "borderColor": "#2A2F36",
-                  "borderRadius": 20,
-                  "borderWidth": 1,
-                  "paddingHorizontal": 14,
-                  "paddingVertical": 8,
-                },
-                {
-                  "backgroundColor": "#003B33",
-                  "borderColor": "#00BFA6",
-                },
-              ]
-            }
-          >
-            <Text
-              style={
-                [
-                  {
-                    "color": "#8B95A5",
-                    "fontSize": 14,
-                    "fontWeight": "600",
-                  },
-                  {
-                    "color": "#00BFA6",
-                  },
-                ]
-              }
-            >
-              Manual
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={[Function]}
-            style={
-              [
-                {
-                  "backgroundColor": "#2A2F36",
-                  "borderColor": "#2A2F36",
-                  "borderRadius": 20,
-                  "borderWidth": 1,
-                  "paddingHorizontal": 14,
-                  "paddingVertical": 8,
-                },
-                false,
-              ]
-            }
-          >
-            <Text
-              style={
-                [
-                  {
-                    "color": "#8B95A5",
-                    "fontSize": 14,
-                    "fontWeight": "600",
-                  },
-                  false,
-                ]
-              }
-            >
-              15m
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={[Function]}
-            style={
-              [
-                {
-                  "backgroundColor": "#2A2F36",
-                  "borderColor": "#2A2F36",
-                  "borderRadius": 20,
-                  "borderWidth": 1,
-                  "paddingHorizontal": 14,
-                  "paddingVertical": 8,
-                },
-                false,
-              ]
-            }
-          >
-            <Text
-              style={
-                [
-                  {
-                    "color": "#8B95A5",
-                    "fontSize": 14,
-                    "fontWeight": "600",
-                  },
-                  false,
-                ]
-              }
-            >
-              1h
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={[Function]}
-            style={
-              [
-                {
-                  "backgroundColor": "#2A2F36",
-                  "borderColor": "#2A2F36",
-                  "borderRadius": 20,
-                  "borderWidth": 1,
-                  "paddingHorizontal": 14,
-                  "paddingVertical": 8,
-                },
-                false,
-              ]
-            }
-          >
-            <Text
-              style={
-                [
-                  {
-                    "color": "#8B95A5",
-                    "fontSize": 14,
-                    "fontWeight": "600",
-                  },
-                  false,
-                ]
-              }
-            >
-              6h
-            </Text>
-          </Pressable>
-        </View>
-        <View
+          Next sync
+        </Text>
+        <Text
           style={
             {
-              "alignItems": "center",
-              "flexDirection": "row",
-              "justifyContent": "space-between",
-              "paddingVertical": 8,
+              "color": "#F7F9FC",
+              "fontSize": 13,
+              "fontVariant": [
+                "tabular-nums",
+              ],
+              "fontWeight": "600",
+              "lineHeight": 18,
             }
           }
         >
-          <Text
-            style={
-              {
-                "color": "#8B95A5",
-                "fontSize": 14,
-              }
-            }
-          >
-            Last sync
-          </Text>
-          <Text
-            style={
-              {
-                "color": "#E6EAF0",
-                "fontSize": 14,
-                "fontWeight": "600",
-              }
-            }
-          >
-            never
-          </Text>
-        </View>
-        <View
-          style={
-            {
-              "alignItems": "center",
-              "flexDirection": "row",
-              "justifyContent": "space-between",
-              "paddingVertical": 8,
-            }
-          }
-        >
-          <Text
-            style={
-              {
-                "color": "#8B95A5",
-                "fontSize": 14,
-              }
-            }
-          >
-            Next sync
-          </Text>
-          <Text
-            style={
-              {
-                "color": "#E6EAF0",
-                "fontSize": 14,
-                "fontWeight": "600",
-              }
-            }
-          >
-            —
-          </Text>
-        </View>
+          —
+        </Text>
       </View>
     </View>
+  </View>
+  <Text
+    style={
+      {
+        "color": "#677289",
+        "fontSize": 11,
+        "fontWeight": "500",
+        "letterSpacing": 1.2,
+        "lineHeight": 14,
+        "marginBottom": 8,
+        "marginTop": 20,
+        "paddingHorizontal": 20,
+        "textTransform": "uppercase",
+      }
+    }
+  >
+    Server
+  </Text>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#12151B",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#22272F",
+          "borderWidth": 1,
+        },
+        {
+          "elevation": 2,
+          "shadowColor": "#000",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.18,
+          "shadowRadius": 4,
+        },
+        {
+          "padding": 16,
+        },
+        undefined,
+      ]
+    }
+  >
     <View
       style={
-        {
-          "marginTop": 16,
-          "paddingHorizontal": 16,
-        }
+        [
+          {
+            "gap": 8,
+          },
+          undefined,
+        ]
       }
     >
       <Text
         style={
           {
-            "color": "#8B95A5",
-            "fontSize": 12,
-            "letterSpacing": 1,
-            "marginBottom": 8,
-            "textTransform": "uppercase",
+            "color": "#B4BCCC",
+            "fontSize": 13,
+            "fontWeight": "600",
+            "lineHeight": 18,
           }
         }
       >
@@ -326,447 +516,801 @@ exports[`SettingsScreen matches the locked layout snapshot 1`] = `
       </Text>
       <View
         style={
-          {
-            "backgroundColor": "#1A1F26",
-            "borderRadius": 12,
-            "gap": 12,
-            "padding": 16,
-          }
+          [
+            {
+              "alignItems": "center",
+              "borderRadius": 10,
+              "borderWidth": 1,
+              "flexDirection": "row",
+              "gap": 12,
+              "overflow": "hidden",
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
+            },
+            {
+              "backgroundColor": "#191D24",
+              "borderColor": "#22272F",
+            },
+          ]
         }
       >
+        <Icon
+          color="#677289"
+          name="Server"
+          size={16}
+          strokeWidth={2}
+        />
         <TextInput
           autoCapitalize="none"
           autoCorrect={false}
+          onBlur={[Function]}
           onChangeText={[Function]}
-          placeholder="https://…"
-          placeholderTextColor="#5B6573"
+          onFocus={[Function]}
+          placeholder="https://..."
+          placeholderTextColor="#475061"
           style={
-            {
-              "backgroundColor": "#0E1116",
-              "borderColor": "#2A2F36",
-              "borderRadius": 8,
-              "borderWidth": 1,
-              "color": "#E6EAF0",
-              "fontSize": 14,
-              "paddingHorizontal": 12,
-              "paddingVertical": 10,
-            }
+            [
+              {
+                "color": "#F7F9FC",
+                "flex": 1,
+                "fontSize": 14,
+                "padding": 0,
+              },
+              null,
+            ]
           }
+          underlineColorAndroid="transparent"
           value="https://default.test"
         />
-        <Pressable
-          onPress={[Function]}
+        <Animated.View
+          pointerEvents="none"
           style={
-            {
-              "alignItems": "center",
-              "backgroundColor": "#00BFA6",
-              "borderRadius": 8,
-              "paddingVertical": 10,
-            }
-          }
-        >
-          <Text
-            style={
+            [
               {
-                "color": "#003B33",
-                "fontSize": 14,
-                "fontWeight": "700",
-              }
-            }
-          >
-            Save
-          </Text>
-        </Pressable>
+                "backgroundColor": "#6366F1",
+                "bottom": 0,
+                "height": 2,
+                "left": 0,
+                "position": "absolute",
+                "right": 0,
+                "transformOrigin": "left",
+              },
+              {
+                "opacity": 0,
+                "transform": [
+                  {
+                    "scaleX": 0,
+                  },
+                ],
+              },
+            ]
+          }
+        />
       </View>
     </View>
-    <View
-      style={
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={
         {
-          "marginTop": 16,
-          "paddingHorizontal": 16,
+          "busy": false,
+          "disabled": false,
         }
       }
+      android_ripple={
+        {
+          "borderless": false,
+          "color": "rgba(255,255,255,0.08)",
+        }
+      }
+      onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "borderRadius": 10,
+            "borderWidth": 1,
+            "justifyContent": "center",
+            "overflow": "hidden",
+          },
+          {
+            "backgroundColor": "#6366F1",
+            "borderColor": "#6366F1",
+            "opacity": 1,
+            "paddingHorizontal": 12,
+            "paddingVertical": 8,
+            "width": "100%",
+          },
+          undefined,
+        ]
+      }
     >
-      <Text
+      <Animated.View
         style={
-          {
-            "color": "#8B95A5",
-            "fontSize": 12,
-            "letterSpacing": 1,
-            "marginBottom": 8,
-            "textTransform": "uppercase",
-          }
-        }
-      >
-        Photo cap (0 = unlimited)
-      </Text>
-      <View
-        style={
-          {
-            "backgroundColor": "#1A1F26",
-            "borderRadius": 12,
-            "gap": 12,
-            "padding": 16,
-          }
-        }
-      >
-        <View
-          style={
+          [
             {
               "alignItems": "center",
               "flexDirection": "row",
               "gap": 8,
-              "justifyContent": "space-between",
+              "justifyContent": "center",
+            },
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
+        }
+      >
+        <Icon
+          color="#FFFFFF"
+          name="Check"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
+          numberOfLines={1}
+          style={
+            [
+              {
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              },
+              {
+                "color": "#FFFFFF",
+                "fontSize": 13,
+              },
+            ]
+          }
+        >
+          Save
+        </Text>
+      </Animated.View>
+    </Pressable>
+  </View>
+  <Text
+    style={
+      {
+        "color": "#677289",
+        "fontSize": 11,
+        "fontWeight": "500",
+        "letterSpacing": 1.2,
+        "lineHeight": 14,
+        "marginBottom": 8,
+        "marginTop": 20,
+        "paddingHorizontal": 20,
+        "textTransform": "uppercase",
+      }
+    }
+  >
+    Photos
+  </Text>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#12151B",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#22272F",
+          "borderWidth": 1,
+        },
+        {
+          "elevation": 2,
+          "shadowColor": "#000",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.18,
+          "shadowRadius": 4,
+        },
+        {
+          "padding": 16,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#F7F9FC",
+          "fontSize": 15,
+          "fontWeight": "600",
+          "lineHeight": 22,
+          "marginBottom": 8,
+        }
+      }
+    >
+      Photo cap (0 = unlimited)
+    </Text>
+    <View
+      style={
+        {
+          "paddingVertical": 8,
+        }
+      }
+    >
+      <View
+        accessibilityRole="adjustable"
+        style={
+          {
+            "alignItems": "center",
+            "flexDirection": "row",
+            "gap": 8,
+            "justifyContent": "space-between",
+          }
+        }
+      >
+        <Pressable
+          accessibilityLabel="Decrease by 100"
+          accessibilityRole="button"
+          disabled={false}
+          hitSlop={6}
+          onPress={[Function]}
+          style={[Function]}
+        >
+          <Icon
+            color="#F7F9FC"
+            name="Minus"
+            size={20}
+            strokeWidth={2}
+          />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Decrease by 1"
+          accessibilityRole="button"
+          disabled={false}
+          hitSlop={6}
+          onPress={[Function]}
+          style={[Function]}
+        >
+          <Icon
+            color="#F7F9FC"
+            name="Minus"
+            size={20}
+            strokeWidth={2}
+          />
+        </Pressable>
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flex": 1,
+              "justifyContent": "center",
             }
           }
         >
-          <Pressable
-            onPress={[Function]}
-            style={
-              {
-                "backgroundColor": "#2A2F36",
-                "borderRadius": 8,
-                "paddingHorizontal": 10,
-                "paddingVertical": 8,
-              }
-            }
-          >
-            <Text
-              style={
-                {
-                  "color": "#E6EAF0",
-                  "fontSize": 14,
-                  "fontWeight": "600",
-                }
-              }
-            >
-              −100
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={[Function]}
-            style={
-              {
-                "backgroundColor": "#2A2F36",
-                "borderRadius": 8,
-                "paddingHorizontal": 10,
-                "paddingVertical": 8,
-              }
-            }
-          >
-            <Text
-              style={
-                {
-                  "color": "#E6EAF0",
-                  "fontSize": 14,
-                  "fontWeight": "600",
-                }
-              }
-            >
-              −1
-            </Text>
-          </Pressable>
           <Text
             style={
               {
-                "color": "#E6EAF0",
-                "flex": 1,
-                "fontSize": 22,
-                "fontWeight": "bold",
-                "textAlign": "center",
+                "color": "#F7F9FC",
+                "fontSize": 28,
+                "fontVariant": [
+                  "tabular-nums",
+                ],
+                "fontWeight": "700",
+                "letterSpacing": -0.4,
+                "lineHeight": 32,
               }
             }
           >
             5000
           </Text>
-          <Pressable
-            onPress={[Function]}
-            style={
-              {
-                "backgroundColor": "#2A2F36",
-                "borderRadius": 8,
-                "paddingHorizontal": 10,
-                "paddingVertical": 8,
-              }
-            }
-          >
-            <Text
-              style={
-                {
-                  "color": "#E6EAF0",
-                  "fontSize": 14,
-                  "fontWeight": "600",
-                }
-              }
-            >
-              +1
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={[Function]}
-            style={
-              {
-                "backgroundColor": "#2A2F36",
-                "borderRadius": 8,
-                "paddingHorizontal": 10,
-                "paddingVertical": 8,
-              }
-            }
-          >
-            <Text
-              style={
-                {
-                  "color": "#E6EAF0",
-                  "fontSize": 14,
-                  "fontWeight": "600",
-                }
-              }
-            >
-              +100
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
-    <View
-      style={
-        {
-          "marginTop": 16,
-          "paddingHorizontal": 16,
-        }
-      }
-    >
-      <Text
-        style={
-          {
-            "color": "#8B95A5",
-            "fontSize": 12,
-            "letterSpacing": 1,
-            "marginBottom": 8,
-            "textTransform": "uppercase",
-          }
-        }
-      >
-        Account
-      </Text>
-      <View
-        style={
-          {
-            "backgroundColor": "#1A1F26",
-            "borderRadius": 12,
-            "gap": 12,
-            "padding": 16,
-          }
-        }
-      >
-        <View
-          style={
-            {
-              "alignItems": "center",
-              "flexDirection": "row",
-              "justifyContent": "space-between",
-              "paddingVertical": 8,
-            }
-          }
-        >
-          <Text
-            style={
-              {
-                "color": "#8B95A5",
-                "fontSize": 14,
-              }
-            }
-          >
-            Device token
-          </Text>
-          <Text
-            style={
-              {
-                "color": "#E6EAF0",
-                "fontSize": 14,
-                "fontWeight": "600",
-              }
-            }
-          >
-            …
-          </Text>
         </View>
         <Pressable
+          accessibilityLabel="Increase by 1"
+          accessibilityRole="button"
+          disabled={false}
+          hitSlop={6}
           onPress={[Function]}
-          style={
-            {
-              "alignItems": "center",
-              "backgroundColor": "#2A1A1F",
-              "borderColor": "#EF4444",
-              "borderRadius": 8,
-              "borderWidth": 1,
-              "marginTop": 8,
-              "paddingVertical": 10,
-            }
-          }
+          style={[Function]}
         >
-          <Text
-            style={
-              {
-                "color": "#EF4444",
-                "fontSize": 14,
-                "fontWeight": "700",
-              }
-            }
-          >
-            Log out
-          </Text>
+          <Icon
+            color="#F7F9FC"
+            name="Plus"
+            size={20}
+            strokeWidth={2}
+          />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Increase by 100"
+          accessibilityRole="button"
+          disabled={false}
+          hitSlop={6}
+          onPress={[Function]}
+          style={[Function]}
+        >
+          <Icon
+            color="#F7F9FC"
+            name="Plus"
+            size={20}
+            strokeWidth={2}
+          />
         </Pressable>
       </View>
     </View>
-    <View
+    <Text
       style={
         {
-          "marginTop": 16,
-          "paddingHorizontal": 16,
+          "color": "#677289",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "lineHeight": 18,
+          "marginTop": 8,
         }
       }
     >
-      <Text
-        style={
-          {
-            "color": "#8B95A5",
-            "fontSize": 12,
-            "letterSpacing": 1,
-            "marginBottom": 8,
-            "textTransform": "uppercase",
-          }
+      Photos above the cap are rejected at capture so the shard stays bounded.
+    </Text>
+  </View>
+  <Text
+    style={
+      {
+        "color": "#677289",
+        "fontSize": 11,
+        "fontWeight": "500",
+        "letterSpacing": 1.2,
+        "lineHeight": 14,
+        "marginBottom": 8,
+        "marginTop": 20,
+        "paddingHorizontal": 20,
+        "textTransform": "uppercase",
+      }
+    }
+  >
+    Account
+  </Text>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#12151B",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#22272F",
+          "borderWidth": 1,
+        },
+        {
+          "elevation": 2,
+          "shadowColor": "#000",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.18,
+          "shadowRadius": 4,
+        },
+        {
+          "padding": 16,
+        },
+        undefined,
+      ]
+    }
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "gap": 12,
+          "marginBottom": 12,
         }
-      >
-        Storage usage
-      </Text>
+      }
+    >
       <View
         style={
-          {
-            "backgroundColor": "#1A1F26",
-            "borderRadius": 12,
-            "gap": 12,
-            "padding": 16,
-          }
+          [
+            {
+              "alignItems": "center",
+              "backgroundColor": "#191D24",
+              "borderColor": "#22272F",
+              "borderWidth": 1,
+              "justifyContent": "center",
+            },
+            {
+              "borderRadius": 9999,
+              "height": 44,
+              "width": 44,
+            },
+          ]
         }
       >
         <Text
-          style={
-            {
-              "color": "#5B6573",
-              "fontSize": 12,
-              "fontStyle": "italic",
-            }
-          }
-        >
-          Loading…
-        </Text>
-        <Pressable
-          disabled={false}
-          onPress={[Function]}
+          accessibilityLabel="Avatar for …"
           style={
             [
               {
-                "alignItems": "center",
-                "backgroundColor": "#00BFA6",
-                "borderRadius": 8,
-                "paddingVertical": 10,
+                "color": "#6366F1",
+                "fontSize": 17,
+                "fontWeight": "600",
+                "letterSpacing": -0.1,
+                "lineHeight": 22,
               },
-              false,
+              {
+                "fontSize": 18,
+              },
             ]
           }
         >
-          <Text
-            style={
-              {
-                "color": "#003B33",
-                "fontSize": 14,
-                "fontWeight": "700",
-              }
+          …
+        </Text>
+      </View>
+      <View
+        style={
+          {
+            "flex": 1,
+          }
+        }
+      >
+        <Text
+          style={
+            {
+              "color": "#F7F9FC",
+              "fontSize": 15,
+              "fontWeight": "600",
+              "lineHeight": 22,
+              "marginBottom": 8,
             }
-          >
-            Refresh
-          </Text>
-        </Pressable>
+          }
+        >
+          Device token
+        </Text>
+        <Text
+          style={
+            {
+              "color": "#677289",
+              "fontFamily": "monospace",
+              "fontSize": 13,
+              "fontWeight": "400",
+              "lineHeight": 18,
+            }
+          }
+        >
+          …
+          …
+        </Text>
       </View>
     </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": false,
+          "disabled": false,
+        }
+      }
+      android_ripple={
+        {
+          "borderless": false,
+          "color": "rgba(255,255,255,0.08)",
+        }
+      }
+      onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "borderRadius": 10,
+            "borderWidth": 1,
+            "justifyContent": "center",
+            "overflow": "hidden",
+          },
+          {
+            "backgroundColor": "rgba(239,68,68,0.14)",
+            "borderColor": "#EF4444",
+            "opacity": 1,
+            "paddingHorizontal": 16,
+            "paddingVertical": 12,
+            "width": "100%",
+          },
+          undefined,
+        ]
+      }
+    >
+      <Animated.View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 8,
+              "justifyContent": "center",
+            },
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
+        }
+      >
+        <Icon
+          color="#EF4444"
+          name="LogOut"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
+          numberOfLines={1}
+          style={
+            [
+              {
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              },
+              {
+                "color": "#EF4444",
+                "fontSize": 15,
+              },
+            ]
+          }
+        >
+          Log out
+        </Text>
+      </Animated.View>
+    </Pressable>
+  </View>
+  <Text
+    style={
+      {
+        "color": "#677289",
+        "fontSize": 11,
+        "fontWeight": "500",
+        "letterSpacing": 1.2,
+        "lineHeight": 14,
+        "marginBottom": 8,
+        "marginTop": 20,
+        "paddingHorizontal": 20,
+        "textTransform": "uppercase",
+      }
+    }
+  >
+    Storage
+  </Text>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#12151B",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#22272F",
+          "borderWidth": 1,
+        },
+        {
+          "elevation": 2,
+          "shadowColor": "#000",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.18,
+          "shadowRadius": 4,
+        },
+        {
+          "padding": 16,
+        },
+        undefined,
+      ]
+    }
+  >
+    <Text
+      style={
+        {
+          "color": "#677289",
+          "fontSize": 13,
+          "fontWeight": "400",
+          "lineHeight": 18,
+          "marginTop": 8,
+        }
+      }
+    >
+      Tap refresh to compute storage usage.
+    </Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={
+        {
+          "busy": false,
+          "disabled": false,
+        }
+      }
+      android_ripple={
+        {
+          "borderless": false,
+          "color": "rgba(255,255,255,0.08)",
+        }
+      }
+      disabled={false}
+      onPress={[Function]}
+      onPressIn={[Function]}
+      onPressOut={[Function]}
+      style={
+        [
+          {
+            "alignItems": "center",
+            "borderRadius": 10,
+            "borderWidth": 1,
+            "justifyContent": "center",
+            "overflow": "hidden",
+          },
+          {
+            "backgroundColor": "transparent",
+            "borderColor": "transparent",
+            "opacity": 1,
+            "paddingHorizontal": 12,
+            "paddingVertical": 8,
+            "width": "100%",
+          },
+          undefined,
+        ]
+      }
+    >
+      <Animated.View
+        style={
+          [
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 8,
+              "justifyContent": "center",
+            },
+            {
+              "transform": [
+                {
+                  "scale": {
+                    "_v": 1,
+                    "value": 1,
+                  },
+                },
+              ],
+            },
+          ]
+        }
+      >
+        <Icon
+          color="#6366F1"
+          name="RefreshCw"
+          size={16}
+          strokeWidth={2}
+        />
+        <Text
+          numberOfLines={1}
+          style={
+            [
+              {
+                "fontSize": 15,
+                "fontWeight": "600",
+                "lineHeight": 22,
+              },
+              {
+                "color": "#6366F1",
+                "fontSize": 13,
+              },
+            ]
+          }
+        >
+          Refresh
+        </Text>
+      </Animated.View>
+    </Pressable>
+  </View>
+  <Text
+    style={
+      {
+        "color": "#677289",
+        "fontSize": 11,
+        "fontWeight": "500",
+        "letterSpacing": 1.2,
+        "lineHeight": 14,
+        "marginBottom": 8,
+        "marginTop": 20,
+        "paddingHorizontal": 20,
+        "textTransform": "uppercase",
+      }
+    }
+  >
+    About
+  </Text>
+  <View
+    style={
+      [
+        {
+          "backgroundColor": "#12151B",
+          "borderRadius": 14,
+        },
+        {
+          "borderColor": "#22272F",
+          "borderWidth": 1,
+        },
+        {
+          "elevation": 2,
+          "shadowColor": "#000",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.18,
+          "shadowRadius": 4,
+        },
+        {
+          "padding": 16,
+        },
+        undefined,
+      ]
+    }
+  >
     <View
       style={
         {
-          "marginTop": 16,
-          "paddingHorizontal": 16,
+          "borderBottomColor": "#22272F",
+          "borderBottomWidth": 1,
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingVertical": 8,
         }
       }
     >
       <Text
         style={
           {
-            "color": "#8B95A5",
-            "fontSize": 12,
-            "letterSpacing": 1,
-            "marginBottom": 8,
-            "textTransform": "uppercase",
+            "color": "#677289",
+            "fontSize": 13,
+            "fontWeight": "400",
+            "lineHeight": 18,
           }
         }
       >
-        About
+        App version
       </Text>
-      <View
+      <Text
         style={
           {
-            "backgroundColor": "#1A1F26",
-            "borderRadius": 12,
-            "gap": 12,
-            "padding": 16,
+            "color": "#F7F9FC",
+            "fontSize": 13,
+            "fontWeight": "600",
+            "lineHeight": 18,
           }
         }
       >
-        <View
-          style={
-            {
-              "alignItems": "center",
-              "flexDirection": "row",
-              "justifyContent": "space-between",
-              "paddingVertical": 8,
-            }
-          }
-        >
-          <Text
-            style={
-              {
-                "color": "#8B95A5",
-                "fontSize": 14,
-              }
-            }
-          >
-            App version
-          </Text>
-          <Text
-            style={
-              {
-                "color": "#E6EAF0",
-                "fontSize": 14,
-                "fontWeight": "600",
-              }
-            }
-          >
-            0.1.0
-          </Text>
-        </View>
-        <Text
-          style={
-            {
-              "color": "#5B6573",
-              "fontSize": 12,
-              "marginTop": 16,
-              "textAlign": "center",
-            }
-          }
-        >
-          Built for Paytm × Qdrant hackathon
-        </Text>
-      </View>
+        0.1.0
+      </Text>
     </View>
-  </ScrollView>
-</SafeAreaView>
+    <Text
+      style={
+        {
+          "color": "#677289",
+          "fontSize": 11,
+          "fontWeight": "500",
+          "letterSpacing": 0.3,
+          "lineHeight": 14,
+          "marginTop": 12,
+          "textAlign": "center",
+        }
+      }
+    >
+      Offline-first AI · Built for the Paytm × Qdrant hackathon 2025
+    </Text>
+  </View>
+</ScrollView>
 `;
