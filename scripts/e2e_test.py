@@ -65,10 +65,10 @@ payload = {
             "project_id": "e2e-river-test",
             "file_path": f"e2e-river-test/{DEVICE_ID}/{photo_id}.jpg",
             "embedding_status": "ok",
-            "cloudinary_public_id": None,
-            "cloudinary_tags": ["river", "pollution"],
-            "cloudinary_objects": [],
-            "cloudinary_ocr_text": None,
+            "enrichment_id": None,
+            "enrichment_tags": ["river", "pollution"],
+            "enrichment_objects": [],
+            "enrichment_text": None,
             "synced_at": None,
             "local_updated_at": "2025-05-12T14:23:01.000Z",
             "vector_checksum": f"sha256:e2e:{photo_id}",
@@ -91,7 +91,7 @@ resp.raise_for_status()
 pull = resp.json()
 our_point = next((p for p in pull["points"] if p["id"] == photo_id), None)
 if our_point:
-    print(f"   found our point in pull: id={our_point['id'][:12]}..., tags={our_point['payload'].get('cloudinary_tags')}")
+    print(f"   found our point in pull: id={our_point['id'][:12]}..., tags={our_point['payload'].get('enrichment_tags')}")
 else:
     print(f"   [!] point not found in pull (may be filtered by device_id exclusion)")
     print(f"   pull returned {len(pull['points'])} points")

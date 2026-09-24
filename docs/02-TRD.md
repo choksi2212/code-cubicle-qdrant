@@ -54,7 +54,7 @@
 | Sync API runtime | Uvicorn | 0.32+ | ASGI server |
 | Sync API deploy | Railway / Render | n/a | Free-tier hosting |
 | Central vector DB | Qdrant Cloud | Free tier | Centralized vector store |
-| Object storage | S3 / Cloudinary | n/a | Photo binary storage |
+| Object storage | S3 / enrichment | n/a | Photo binary storage |
 | Logging (RN) | `pino` + `react-native-file-logger` | latest | Structured app logs |
 | Logging (server) | `loguru` | 0.7+ | Server logs |
 | Testing (TS) | Jest + React Native Testing Library | latest | Unit + component tests |
@@ -887,7 +887,7 @@ For v1, the model is bundled in the app. Updates require a new app release. For 
 - **FastAPI 0.115+** with `uvicorn` ASGI server.
 - **SQLite** for sync cursors and audit logs (Postgres if free tier Postgres is available on Railway).
 - **Qdrant Cloud** as the central vector store (free tier).
-- **httpx** for Cloudinary enrichment calls.
+- **httpx** for enrichment calls.
 - **Deploy:** Railway free tier (1 vCPU, 512 MB RAM).
 
 ### 7.2 Project Layout
@@ -907,7 +907,7 @@ apps/sync-api/
 │   ├── services/
 │   │   ├── qdrant.py           # Central cluster client
 │   │   ├── cursor.py           # Opaque cursor encoding
-│   │   ├── enrichment.py       # Cloudinary handoff
+│   │   ├── enrichment.py       # enrichment handoff
 │   │   └── audit.py            # Audit log writer
 │   ├── models/
 │   │   ├── point.py            # Pydantic point model
@@ -948,9 +948,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--worker
 ```bash
 QDRANT_URL=https://<your-cluster>.aws.cloud.qdrant.io
 QDRANT_API_KEY=<your-api-key>
-CLOUDINARY_CLOUD_NAME=<cloud-name>
 CLOUDINARY_API_KEY=<key>
-CLOUDINARY_API_SECRET=<secret>
 JWT_SECRET=<random-256-bit>
 DATABASE_URL=sqlite:///./sync.db
 LOG_LEVEL=INFO
@@ -1167,7 +1165,7 @@ Critical paths:
 | Stolen device | Photos are on-device only until sync; device token in Keychain/Keystore |
 | Network MITM | HTTPS only (TLS 1.3); cert pinning via `react-native-ssl-pinning` |
 | Forged sync requests | Device token + per-request nonce |
-| Server breach | Server stores no photos, only vectors + metadata; binary in Cloudinary |
+| Server breach | Server stores no photos, only vectors + metadata; binary in enrichment |
 | Model theft | Model is in the app bundle; reversing is possible but out of scope for v1 |
 | GPS data leakage | GPS only leaves device with explicit sync; user can disable in settings |
 
@@ -1222,10 +1220,8 @@ QDRANT_API_KEY=replace-with-your-api-key
 SYNC_API_URL=http://localhost:8000
 # (production): SYNC_API_URL=https://your-railway-app.up.railway.app
 
-# Cloudinary (Mihir's track, shared here for reference)
-CLOUDINARY_CLOUD_NAME=your-cloud-name
+# enrichment (Mihir's track, shared here for reference)
 CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
 
 # Server-only (sync API deployment)
 JWT_SECRET=replace-with-random-256-bit

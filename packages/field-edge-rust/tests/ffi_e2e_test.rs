@@ -37,10 +37,10 @@ fn ffi_upsert_points_then_query() {
             "project_id": "p",
             "file_path": "f",
             "embedding_status": "ok",
-            "cloudinary_public_id": null,
-            "cloudinary_tags": [],
-            "cloudinary_objects": [],
-            "cloudinary_ocr_text": null,
+            "enrichment_id": null,
+            "enrichment_tags": [],
+            "enrichment_objects": [],
+            "enrichment_text": null,
             "synced_at": null,
             "local_updated_at": "2025-05-12T10:00:00.000Z",
             "vector_checksum": "sha256:test",
@@ -75,8 +75,8 @@ fn ffi_sync_diff_no_conflicts() {
         "captured_at": "2025-05-12T10:00:00.000Z",
         "lat": 0.0, "lng": 0.0, "gps_status": "ok",
         "project_id": "p", "file_path": "f", "embedding_status": "ok",
-        "cloudinary_public_id": null, "cloudinary_tags": [], "cloudinary_objects": [],
-        "cloudinary_ocr_text": null, "synced_at": null,
+        "enrichment_id": null, "enrichment_tags": [], "enrichment_objects": [],
+        "enrichment_text": null, "synced_at": null,
         "local_updated_at": "2025-05-12T10:00:00.000Z", "vector_checksum": "sha256:abc"
     }));
 
@@ -86,8 +86,8 @@ fn ffi_sync_diff_no_conflicts() {
         "captured_at": "2025-05-12T11:00:00.000Z",
         "lat": 0.0, "lng": 0.0, "gps_status": "ok",
         "project_id": "p", "file_path": "f", "embedding_status": "ok",
-        "cloudinary_public_id": null, "cloudinary_tags": [], "cloudinary_objects": [],
-        "cloudinary_ocr_text": null, "synced_at": null,
+        "enrichment_id": null, "enrichment_tags": [], "enrichment_objects": [],
+        "enrichment_text": null, "synced_at": null,
         "local_updated_at": "2025-05-12T11:00:00.000Z", "vector_checksum": "sha256:def"
     }));
 
@@ -108,8 +108,8 @@ fn ffi_resolve_conflict_merges_within_1s() {
         "captured_at": "2025-05-12T10:00:00.000Z",
         "lat": 0.0, "lng": 0.0, "gps_status": "ok",
         "project_id": "A", "file_path": "f", "embedding_status": "ok",
-        "cloudinary_public_id": null, "cloudinary_tags": [], "cloudinary_objects": [],
-        "cloudinary_ocr_text": null, "synced_at": null,
+        "enrichment_id": null, "enrichment_tags": [], "enrichment_objects": [],
+        "enrichment_text": null, "synced_at": null,
         "local_updated_at": "2025-05-12T10:00:00.100Z", "vector_checksum": "sha256:abc"
     });
     let p2 = serde_json::json!({
@@ -117,8 +117,8 @@ fn ffi_resolve_conflict_merges_within_1s() {
         "captured_at": "2025-05-12T10:00:00.000Z",
         "lat": 0.0, "lng": 0.0, "gps_status": "ok",
         "project_id": "B", "file_path": "f", "embedding_status": "ok",
-        "cloudinary_public_id": null, "cloudinary_tags": [], "cloudinary_objects": [],
-        "cloudinary_ocr_text": null, "synced_at": null,
+        "enrichment_id": null, "enrichment_tags": [], "enrichment_objects": [],
+        "enrichment_text": null, "synced_at": null,
         "local_updated_at": "2025-05-12T10:00:00.500Z", "vector_checksum": "sha256:abc"
     });
     let result = ffi::resolve_conflict(p1.to_string(), p2.to_string());
@@ -158,8 +158,8 @@ fn ffi_point_count_after_upserts() {
                 "captured_at": "2025-05-12T10:00:00.000Z",
                 "lat": 0.0, "lng": 0.0, "gps_status": "ok",
                 "project_id": "p", "file_path": "f", "embedding_status": "ok",
-                "cloudinary_public_id": null, "cloudinary_tags": [], "cloudinary_objects": [],
-                "cloudinary_ocr_text": null, "synced_at": null,
+                "enrichment_id": null, "enrichment_tags": [], "enrichment_objects": [],
+                "enrichment_text": null, "synced_at": null,
                 "local_updated_at": "2025-05-12T10:00:00.000Z", "vector_checksum": "sha256:test"
             }
         }));
@@ -183,8 +183,8 @@ fn ffi_delete_points_removes() {
             "captured_at": "2025-05-12T10:00:00.000Z",
             "lat": 0.0, "lng": 0.0, "gps_status": "ok",
             "project_id": "p", "file_path": "f", "embedding_status": "ok",
-            "cloudinary_public_id": null, "cloudinary_tags": [], "cloudinary_objects": [],
-            "cloudinary_ocr_text": null, "synced_at": null,
+            "enrichment_id": null, "enrichment_tags": [], "enrichment_objects": [],
+            "enrichment_text": null, "synced_at": null,
             "local_updated_at": "2025-05-12T10:00:00.000Z", "vector_checksum": "sha256:test"
         }
     });

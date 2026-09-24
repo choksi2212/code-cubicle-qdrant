@@ -57,7 +57,7 @@
 │                              CLOUD                                        │
 │                                                                          │
 │  ┌────────────────────┐    ┌────────────────────┐    ┌────────────────┐  │
-│  │    Sync API        │───▶│   Qdrant Cloud     │◀──▶│  Cloudinary    │  │
+│  │    Sync API        │───▶│   Qdrant Cloud     │◀──▶│  enrichment    │  │
 │  │    (FastAPI)       │    │   (central shard)  │    │  (AI tagging)  │  │
 │  └─────────┬──────────┘    └────────────────────┘    └────────┬───────┘  │
 │            │                                                  │          │
@@ -434,7 +434,7 @@ User          App (RN)        Native Bridge    Rust Core       ONNX Runtime    E
 ### 5.2 Online Sync (Upload + Pull)
 
 ```
-Device (RN)              Sync API            Central Qdrant       Cloudinary
+Device (RN)              Sync API            Central Qdrant       enrichment
    │                       │                       │                   │
    │  POST /sync/upload    │                       │                   │
    │  (points + payload)   │                       │                   │
@@ -462,7 +462,7 @@ Device (RN)              Sync API            Central Qdrant       Cloudinary
    │                       │ scroll qdrant         │                   │
    │                       │ ─────────────────────▶│                   │
    │                       │ ◀───── points ────────│                   │
-   │                       │ (includes cloudinary  │                   │
+   │                       │ (includes enrichment  │                   │
    │                       │  tags from prior batch)                  │
    │ 200 OK + points       │                       │                   │
    │ ◀─────────────────────│                       │                   │
@@ -882,7 +882,7 @@ If Device A deletes point X while Device B is editing it:
                                       │
                                       ▼
                             ┌─────────────────┐
-                            │ Cloudinary      │
+                            │ enrichment      │
                             │ (AI enrichment) │
                             └─────────────────┘
 ```
@@ -892,12 +892,12 @@ If Device A deletes point X while Device B is editing it:
 - Devices: distributed globally, intermittent connectivity.
 - Sync API: hosted on Railway free tier (`*.up.railway.app`).
 - Qdrant Cloud: AWS ca-central-1.
-- Cloudinary: their global CDN.
+- enrichment: their global CDN.
 
 Latency (typical):
 - Device → Sync API: 50-300ms.
 - Sync API → Qdrant Cloud: 10-50ms (same region).
-- Sync API → Cloudinary: 100-300ms.
+- Sync API → enrichment: 100-300ms.
 
 ### 9.3 DNS and Certificates
 
@@ -939,7 +939,7 @@ A typical sync run of 1000 points = ~4 MB. Acceptable on 4G, painful on 2G (defe
 - **Region:** `ca-central-1` (Canada Central); pick closest to demo audience.
 - **API key:** stored in `.env` and Railway's secret manager.
 
-### 10.4 Cloudinary Deployment
+### 10.4 enrichment Deployment
 
 - **Account:** Free tier.
 - **Upload preset:** unsigned for demo (auth'd for prod).
@@ -951,7 +951,7 @@ For the Paytm-office demo:
 - Mobile app: pre-installed on demo devices (Manas's iPhone + a backup Android).
 - Sync API: running on Railway (URL hardcoded in the app).
 - Central Qdrant: warmed with seed data (50 sample photos pre-uploaded).
-- Cloudinary: 50 photos pre-processed with tags.
+- enrichment: 50 photos pre-processed with tags.
 - Demo flow: capture new photo → search → sync → verify in dashboard. All happens in <60 seconds.
 
 ---
@@ -1001,20 +1001,20 @@ Beyond the limits:
 | Edge shard corrupted | All local vectors lost | Cloud has the authoritative state; user re-syncs |
 | Sync API down | New sync runs fail | Client retries with backoff; data on device is safe |
 | Qdrant Cloud outage | Pulls fail, uploads queue | Client retries; data on device is safe |
-| Cloudinary outage | Enrichment delayed | Point exists without tags; tags populate when Cloudinary recovers |
+| enrichment outage | Enrichment delayed | Point exists without tags; tags populate when enrichment recovers |
 | WAL corrupted | Some recent writes lost | Replay stops at corruption point; older data is safe |
 
 ### 12.2 Backups
 
 - **Local:** No backup needed; cloud is the backup.
 - **Cloud (Qdrant):** Qdrant Cloud takes automatic snapshots (free tier: daily, 7-day retention).
-- **Cloudinary:** Their standard retention policy (no control for free tier).
+- **enrichment:** Their standard retention policy (no control for free tier).
 
 ### 12.3 Data Loss Windows
 
 - **Photo in capture → sync:** bounded by user action. Worst case: user captures photo, never syncs, loses phone → photo lost.
 - **Photo in sync → cloud:** bounded by network. Idempotent retries ensure eventual delivery.
-- **Cloud enrichment:** bounded by Cloudinary availability. Enrichment is eventually consistent.
+- **Cloud enrichment:** bounded by enrichment availability. Enrichment is eventually consistent.
 
 ### 12.4 Manual Recovery Procedure
 
@@ -1092,7 +1092,7 @@ If the user reports "my photos aren't showing up":
 
 - Becoming a general-purpose vector DB.
 - Replacing cloud-only solutions for users with reliable internet.
-- Competing with Cloudinary on media transformation (we complement, not compete).
+- Competing with enrichment on media transformation (we complement, not compete).
 
 ---
 

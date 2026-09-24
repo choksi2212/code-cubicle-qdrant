@@ -24,9 +24,9 @@ pub enum EmbeddingStatus {
     Failed,
 }
 
-/// A Cloudinary object detection result
+/// An enrichment object-detection result
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CloudinaryObject {
+pub struct EnrichmentObject {
     pub label: String,
     /// Box as [x_min, y_min, x_max, y_max] in pixels
     pub box_: Vec<f32>,
@@ -46,10 +46,10 @@ pub struct Payload {
     pub project_id: String,
     pub file_path: String,
     pub embedding_status: EmbeddingStatus,
-    pub cloudinary_public_id: Option<String>,
-    pub cloudinary_tags: Vec<String>,
-    pub cloudinary_objects: Vec<CloudinaryObject>,
-    pub cloudinary_ocr_text: Option<String>,
+    pub enrichment_id: Option<String>,
+    pub enrichment_tags: Vec<String>,
+    pub enrichment_objects: Vec<EnrichmentObject>,
+    pub enrichment_text: Option<String>,
     pub synced_at: Option<String>,
     pub local_updated_at: String,
     pub vector_checksum: String,
@@ -68,10 +68,10 @@ impl Payload {
         let mut merged = self.clone();
 
         // Server-owned fields always overwrite
-        merged.cloudinary_public_id = other.cloudinary_public_id.clone();
-        merged.cloudinary_tags = other.cloudinary_tags.clone();
-        merged.cloudinary_objects = other.cloudinary_objects.clone();
-        merged.cloudinary_ocr_text = other.cloudinary_ocr_text.clone();
+        merged.enrichment_id = other.enrichment_id.clone();
+        merged.enrichment_tags = other.enrichment_tags.clone();
+        merged.enrichment_objects = other.enrichment_objects.clone();
+        merged.enrichment_text = other.enrichment_text.clone();
         merged.synced_at = other.synced_at.clone();
 
         // Last-write-wins on local_updated_at

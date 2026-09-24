@@ -53,10 +53,10 @@ export interface Payload {
   project_id: string;
   file_path: string;
   embedding_status: 'ok' | 'pending' | 'failed';
-  cloudinary_public_id: string | null;
-  cloudinary_tags: string[];
-  cloudinary_objects: Array<{ label: string; box: number[]; confidence: number }>;
-  cloudinary_ocr_text: string | null;
+  enrichment_id: string | null;
+  enrichment_tags: string[];
+  enrichment_objects: Array<{ label: string; box: number[]; confidence: number }>;
+  enrichment_text: string | null;
   synced_at: string | null;
   local_updated_at: string;
   vector_checksum: string;

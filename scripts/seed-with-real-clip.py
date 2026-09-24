@@ -136,10 +136,10 @@ for i, (project_id, desc, tags) in enumerate(seed_descriptions):
         "project_id": project_id,
         "file_path": f"{project_id}/real-clip-seed/{pid}.jpg",
         "embedding_status": "ok",
-        "cloudinary_public_id": None,
-        "cloudinary_tags": tags,
-        "cloudinary_objects": [],
-        "cloudinary_ocr_text": None,
+        "enrichment_id": None,
+        "enrichment_tags": tags,
+        "enrichment_objects": [],
+        "enrichment_text": None,
         "synced_at": now.isoformat(),
         "local_updated_at": captured_at.isoformat(),
         "vector_checksum": f"sha256:real-clip:{pid}",
@@ -166,7 +166,7 @@ for h in results.points:
     print(
         f"   - score={h.score:.4f}  "
         f"project={h.payload.get('project_id')}  "
-        f"tags={h.payload.get('cloudinary_tags')}"
+        f"tags={h.payload.get('enrichment_tags')}"
     )
 
 print("\n[OK] Real CLIP seed complete. The Qdrant Cloud cluster now has real semantic embeddings.")

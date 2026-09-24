@@ -1,6 +1,6 @@
 # FieldEdge 3-Minute Demo — Recording Script
 
-**Audience:** Hackathon judges (Paytm, Qdrant, Cloudinary).
+**Audience:** Hackathon judges (Paytm, Qdrant, enrichment).
 **Device:** Android phone with FieldEdge installed.
 **Network:** Toggle airplane mode on/off.
 **Pre-recording:** Make sure Qdrant Cloud has the 12 seed points uploaded (`scripts/seed-with-real-clip.py`).
@@ -56,5 +56,5 @@
 | Judge persona | What they'll see |
 |---|---|
 | **Qdrant judge** | Real Qdrant Cloud queries returning semantically-ranked results from real CLIP embeddings. Custom Rust→JNI bridge instead of using their JS SDK (which doesn't exist yet). |
-| **Cloudinary judge** | The Cloudinary enrichment handoff is wired in the payload schema (`cloudinary_public_id`, `cloudinary_tags`, etc.) — points uploaded to Qdrant Cloud carry the metadata shape their API expects. |
+| **enrichment judge** | The enrichment handoff is wired in the payload schema (`enrichment_id`, `enrichment_tags`, etc.) — points uploaded to Qdrant Cloud carry the metadata shape their API expects. |
 | **Paytm judge** | The offline-first architecture is exactly what tier-2/3 merchant tooling needs. Airplane mode toggle demonstrates the resilience. |

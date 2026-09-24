@@ -41,10 +41,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     rate_limit_per_minute: int = 60
 
-    # Cloudinary (forwarded from mobile for enrichment triggers)
-    cloudinary_cloud_name: str | None = None
-    cloudinary_api_key: str | None = None
-    cloudinary_api_secret: str | None = None
+    # enrichment (forwarded from mobile for enrichment triggers)
 
     # Logging
     log_level: str = "INFO"

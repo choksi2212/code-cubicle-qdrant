@@ -63,10 +63,10 @@ def make_payload(photo_id: str, project_id: str, tags: list[str], ts_offset_min:
         "project_id": project_id,
         "file_path": f"{project_id}/demo-seed/{photo_id}.jpg",
         "embedding_status": "ok",
-        "cloudinary_public_id": None,
-        "cloudinary_tags": tags,
-        "cloudinary_objects": [],
-        "cloudinary_ocr_text": None,
+        "enrichment_id": None,
+        "enrichment_tags": tags,
+        "enrichment_objects": [],
+        "enrichment_text": None,
         "synced_at": datetime.now(timezone.utc).isoformat(),
         "local_updated_at": captured_at.isoformat(),
         "vector_checksum": f"sha256:demo:{photo_id}",
@@ -173,7 +173,7 @@ def main():
         print(
             f"   - {h.id}  score={h.score:.4f}  "
             f"project={h.payload.get('project_id')}  "
-            f"tags={h.payload.get('cloudinary_tags')}"
+            f"tags={h.payload.get('enrichment_tags')}"
         )
 
     print("\n[OK] Seed complete.")

@@ -79,7 +79,7 @@ The backend comprises four cooperating components:
 [Sync orchestrator: compute diff(local, server), upload new, pull updates, resolve conflicts]
      │
      ▼
-[Central Qdrant cluster + Mihir's Cloudinary pipeline]
+[Central Qdrant cluster + Mihir's separate pipeline]
 ```
 
 ### 1.3 Trust Boundaries
@@ -91,7 +91,7 @@ The backend comprises four cooperating components:
 | Native ↔ Rust | Same process | OS | FFI; no encryption needed |
 | Device ↔ sync API | TLS 1.3 | Internet | Yes (HTTPS) |
 | Sync API ↔ Qdrant Cloud | TLS 1.3 | Qdrant cluster | Yes (HTTPS) |
-| Sync API ↔ Cloudinary | TLS 1.3 | Cloudinary | Yes (HTTPS) |
+| Sync API ↔ enrichment | TLS 1.3 | enrichment | Yes (HTTPS) |
 
 ---
 
@@ -173,7 +173,7 @@ Content-Type: application/json
 
 ### 2.2 `GET /sync/pull`
 
-**Purpose:** Return all points updated on the server since the given cursor, in order. Includes Cloudinary-enriched payloads when available.
+**Purpose:** Return all points updated on the server since the given cursor, in order. Includes enrichment-enriched payloads when available.
 
 **Request:**
 ```http
@@ -196,12 +196,12 @@ Authorization: Bearer <device_token>
       "vector": [0.012, -0.034, ...],
       "payload": {
         "...": "...",
-        "cloudinary_public_id": "abc123def",
-        "cloudinary_tags": ["water", "pollution", "outdoor"],
-        "cloudinary_objects": [
+        "enrichment_id": "abc123def",
+        "enrichment_tags": ["water", "pollution", "outdoor"],
+        "enrichment_objects": [
           {"label": "bottle", "box": [10, 20, 50, 60], "confidence": 0.92}
         ],
-        "cloudinary_ocr_text": null,
+        "enrichment_text": null,
         "synced_at": "2025-05-12T14:25:33.001Z",
         "server_version": 1
       }
@@ -513,10 +513,10 @@ client.create_payload_index(
   "project_id": "p-river-study",
   "file_path": "p-river-study/550e8400.../01HXZ3KQ9R8X9V6QH7Y4N5M3BP.jpg",
   "embedding_status": "ok",
-  "cloudinary_public_id": null,
-  "cloudinary_tags": [],
-  "cloudinary_objects": [],
-  "cloudinary_ocr_text": null,
+  "enrichment_id": null,
+  "enrichment_tags": [],
+  "enrichment_objects": [],
+  "enrichment_text": null,
   "synced_at": null,
   "local_updated_at": "2025-05-12T14:23:01.456Z",
   "vector_checksum": "sha256:abc123..."
@@ -530,7 +530,7 @@ client.create_payload_index(
 | `project_id` | Keyword | Match |
 | `captured_at` | Datetime | Range |
 | `device_id` | Keyword | Match (used by `/sync/pull` to exclude own writes) |
-| `cloudinary_public_id` | Keyword | Match (nullable) |
+| `enrichment_id` | Keyword | Match (nullable) |
 | `synced_at` | Datetime | Range (for diagnostics) |
 
 ### 5.5 Schema Versioning
@@ -555,15 +555,15 @@ client.create_payload_index(
 | `project_id` | string | ✓ | yes | User-assigned project tag |
 | `file_path` | string | ✓ | no | Relative path from app docs root |
 | `embedding_status` | enum | ✓ | yes | `ok` \| `pending` \| `failed` |
-| `cloudinary_public_id` | string or null | no | yes | Cloudinary asset ID (after sync) |
-| `cloudinary_tags` | string[] | no | yes | Auto-tagging results (after sync) |
-| `cloudinary_objects` | object[] | no | yes | Object detection results (after sync) |
-| `cloudinary_ocr_text` | string or null | no | yes | OCR results (after sync) |
+| `enrichment_id` | string or null | no | yes | enrichment asset ID (after sync) |
+| `enrichment_tags` | string[] | no | yes | Auto-tagging results (after sync) |
+| `enrichment_objects` | object[] | no | yes | Object detection results (after sync) |
+| `enrichment_text` | string or null | no | yes | OCR results (after sync) |
 | `synced_at` | ISO-8601 or null | no | yes | Server-receipt timestamp |
 | `local_updated_at` | ISO-8601 | ✓ | yes | Last local modification timestamp |
 | `vector_checksum` | string | ✓ | no | SHA-256 of vector bytes, prefix `sha256:` |
 
-### 6.1 `cloudinary_objects` Shape
+### 6.1 `enrichment_objects` Shape
 
 ```json
 {
@@ -573,7 +573,7 @@ client.create_payload_index(
 }
 ```
 
-Box coordinates are pixel-based, image-relative. Image dimensions stored implicitly (Cloudinary stores the asset dimensions).
+Box coordinates are pixel-based, image-relative. Image dimensions stored implicitly (enrichment stores the asset dimensions).
 
 ### 6.2 `vector_checksum` Computation
 
@@ -1077,7 +1077,7 @@ pub fn merge_payloads(local: &Payload, remote: &Payload) -> Payload {
                 if local_value != remote_value {
                     // Conflict on this field. Take the one with the more recent value's updated_at.
                     // For simplicity here: if the field is in our mutable list, use the most recent.
-                    // (For fields like cloudinary_tags that are server-derived, remote always wins.)
+                    // (For fields like enrichment_tags that are server-derived, remote always wins.)
                     if is_server_owned_field(key) {
                         merged.insert(key.clone(), remote_value.clone());
                     } else {
@@ -1094,10 +1094,10 @@ pub fn merge_payloads(local: &Payload, remote: &Payload) -> Payload {
 ```
 
 **Server-owned fields** (remote always wins for these):
-- `cloudinary_public_id`
-- `cloudinary_tags`
-- `cloudinary_objects`
-- `cloudinary_ocr_text`
+- `enrichment_id`
+- `enrichment_tags`
+- `enrichment_objects`
+- `enrichment_text`
 - `synced_at`
 - `server_version`
 

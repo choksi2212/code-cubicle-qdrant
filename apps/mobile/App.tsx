@@ -167,7 +167,7 @@ export default function App() {
         </View>
 
         <Text style={styles.footer}>
-          Built for Paytm × Qdrant × Cloudinary hackathon
+          Built for Paytm × Qdrant hackathon
         </Text>
       </ScrollView>
     </SafeAreaView>

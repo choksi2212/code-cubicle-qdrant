@@ -110,8 +110,8 @@ fn parse_iso(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
 fn diff_fields(local: &Payload, remote: &Payload) -> Vec<String> {
     let mut changed = vec![];
     if local.project_id != remote.project_id { changed.push("project_id".into()); }
-    if local.cloudinary_tags != remote.cloudinary_tags { changed.push("cloudinary_tags".into()); }
-    if local.cloudinary_public_id != remote.cloudinary_public_id { changed.push("cloudinary_public_id".into()); }
+    if local.enrichment_tags != remote.enrichment_tags { changed.push("enrichment_tags".into()); }
+    if local.enrichment_id != remote.enrichment_id { changed.push("enrichment_id".into()); }
     if local.local_updated_at != remote.local_updated_at { changed.push("local_updated_at".into()); }
     changed
 }
@@ -133,10 +133,10 @@ mod tests {
             project_id: project.into(),
             file_path: "f".into(),
             embedding_status: EmbeddingStatus::Ok,
-            cloudinary_public_id: None,
-            cloudinary_tags: vec![],
-            cloudinary_objects: vec![],
-            cloudinary_ocr_text: None,
+            enrichment_id: None,
+            enrichment_tags: vec![],
+            enrichment_objects: vec![],
+            enrichment_text: None,
             synced_at: None,
             local_updated_at: ts.into(),
             vector_checksum: "sha256:abc".into(),
@@ -173,11 +173,11 @@ mod tests {
     fn merge_takes_remote_metadata() {
         let mut local = make_payload("p", "2025-05-12T10:00:00.000Z", "A");
         let mut remote = make_payload("p", "2025-05-12T10:00:00.500Z", "B");
-        local.cloudinary_tags = vec!["old".into()];
-        remote.cloudinary_tags = vec!["new".into()];
+        local.enrichment_tags = vec!["old".into()];
+        remote.enrichment_tags = vec!["new".into()];
 
         let d = resolve_conflict(&local, &remote);
         assert_eq!(d.winner, ConflictWinner::Merged);
-        assert_eq!(d.resolved_payload.cloudinary_tags, vec!["new".to_string()]);
+        assert_eq!(d.resolved_payload.enrichment_tags, vec!["new".to_string()]);
     }
 }

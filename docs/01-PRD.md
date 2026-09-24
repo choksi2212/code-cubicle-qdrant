@@ -3,12 +3,12 @@
 **Document version:** 1.0
 **Last updated:** 2025-09-23
 **Owner:** Manas Choksi (Qdrant Edge track lead)
-**Hackathon:** Code Cubicle × Paytm × Qdrant × Cloudinary, 2025
+**Hackathon:** Code Cubicle × Paytm × Qdrant, 2025
 **Submission deadline:** 2025-10-03
 **Final round venue:** Paytm office
-**Related problem statements:** PS03 (Qdrant Edge) + PS02 (Cloudinary)
+**Related problem statements:** PS03 (Qdrant Edge) + PS02 (enrichment)
 
-> This PRD describes the **edge component** of FieldEdge — the React Native mobile app and its on-device Qdrant Edge runtime, exposed via a custom Rust-to-React Native bridge. The Cloudinary enrichment layer and the cloud dashboard (owned by Mihir) are referenced where relevant but specified in their own documents.
+> This PRD describes the **edge component** of FieldEdge — the React Native mobile app and its on-device Qdrant Edge runtime, exposed via a custom Rust-to-React Native bridge. The enrichment layer and the cloud dashboard (owned by Mihir) are referenced where relevant but specified in their own documents.
 
 ---
 
@@ -54,17 +54,17 @@ A React Native mobile application for iOS and Android that:
 3. **Stores vectors locally** in a Qdrant Edge shard embedded in-process via a custom Rust→React Native bridge (UniFFI-generated bindings).
 4. **Searches semantically offline** — "show me photos of river pollution" returns matching images by cosine similarity over CLIP text↔image embeddings, with zero network.
 5. **Reconciles intelligently when online** — write-ahead log replays, differential sync uploads, conflict resolution by timestamp + vector similarity heuristics, all via the Qdrant Edge sync API plus a thin sync orchestrator.
-6. **Exposes a typed TypeScript API** that a sibling Next.js dashboard (Cloudinary track) can call when building the post-sync enrichment flow.
+6. **Exposes a typed TypeScript API** that a sibling Next.js dashboard (track) can call when building the post-sync enrichment flow.
 
 ### 1.5 What This Component Does NOT Deliver
-- Cloud-side AI tagging. (Owned by Cloudinary track — Mihir.)
-- Project / timeline / impact-story dashboard UI. (Cloudinary track.)
+- Cloud-side AI tagging. (Owned by track — Mihir.)
+- Project / timeline / impact-story dashboard UI. (track.)
 - User authentication or multi-tenant account management. (Out of scope for hackathon.)
 - Video semantic search. (Photos only in v1; videos get perceptual hashes and metadata only.)
 - Cross-device peer-to-peer sync. (All sync routes through central Qdrant Cloud.)
 
 ### 1.6 Success Looks Like (Hackathon-Level)
-- The 3-minute demo video starts with the phone in **airplane mode**, captures a photo, searches "river pollution," gets a correct result, then turns airplane mode off and watches the central Qdrant cluster populate within seconds — all while Mihir's Cloudinary dashboard shows the same photo with AI tags and a generated impact story. **No single second of that demo touches a server the audience can't see.**
+- The 3-minute demo video starts with the phone in **airplane mode**, captures a photo, searches "river pollution," gets a correct result, then turns airplane mode off and watches the central Qdrant cluster populate within seconds — all while Mihir's separate dashboard shows the same photo with AI tags and a generated impact story. **No single second of that demo touches a server the audience can't see.**
 - Judges can download the repo, run `pnpm install && pnpm ios` (or Android equivalent), follow the README, and reproduce the offline→online flow in under 10 minutes.
 - Mihir's dashboard reads from the central Qdrant cluster **without writing custom integration code** — the API contract from Section 7 is the only thing that connects the two halves.
 
@@ -95,14 +95,14 @@ Three classes of solution exist today, and each is missing one critical capabili
 |---|---|---|
 | Cloud-only vector DBs (Pinecone, Weaviate, Qdrant Cloud) | Fast, scalable, AI-powered search | **Useless offline** — every query is a round trip |
 | Mobile vector libraries (FAISS-mobile, sqlite-vss, LanceDB) | Work on device | **No first-class sync semantics** — you build the sync protocol yourself, badly |
-| Cloudinary-style media managers | Excellent AI tagging, transformations, dashboard | **No offline semantic search** — everything assumes upload-first |
+| enrichment-style media managers | Excellent AI tagging, transformations, dashboard | **No offline semantic search** — everything assumes upload-first |
 
 **Qdrant Edge closes this gap conceptually** — it is, in the Qdrant team's own framing, "SQLite but for vector search": in-process, embedded, persistent, with built-in sync semantics. As of this writing it ships official bindings only for Python and Rust; **no JavaScript or React Native SDK exists**. FieldEdge's contribution to the Qdrant Edge story is precisely this: prove that the Edge architecture can be brought to the world's most popular mobile app framework via a thin Rust bridge, and demonstrate the offline-first semantic-media workflow it enables.
 
 ### 2.4 What Success Eliminates
 - **Zero-time semantic search at the point of capture.** The field worker types a question while standing in front of the subject and gets relevant photos in <500 ms, on device.
 - **Zero-loss upload.** When connectivity returns, every captured-and-stored vector makes it to the central cluster, in order, deduped, conflict-resolved.
-- **Zero-friction enrichment.** Cloudinary's auto-tagging (categorize, object detection, OCR) attaches to the same point ID the edge already wrote, so the dashboard sees one unified record per photo.
+- **Zero-friction enrichment.** enrichment's auto-tagging (categorize, object detection, OCR) attaches to the same point ID the edge already wrote, so the dashboard sees one unified record per photo.
 - **Zero-trust violation.** No embedding, no GPS coordinate, no payload leaves the device unless the user explicitly triggers sync. The phone is the source of truth; the cloud is the broadcast.
 
 ---
@@ -113,13 +113,13 @@ Three classes of solution exist today, and each is missing one critical capabili
 Every field worker in the world — researcher, inspector, responder, ranger — has a pocket semantic memory that knows what they've seen, where, and when, even when no signal exists. FieldEdge is the platform layer that makes this possible: the on-device vector store (Qdrant Edge), the on-device embedding model (CLIP via ONNX), the sync protocol, and the enrichment APIs.
 
 ### 3.2 Mission Statement (Hackathon Horizon)
-**For the 2025 Paytm hackathon, deliver a reproducible demo that proves an end-to-end offline-first semantic media workflow on a mobile device using Qdrant Edge as the embedded vector store, accessed via a custom Rust→React Native bridge, and seamlessly enriched by Cloudinary AI when connectivity is restored.**
+**For the 2025 Paytm hackathon, deliver a reproducible demo that proves an end-to-end offline-first semantic media workflow on a mobile device using Qdrant Edge as the embedded vector store, accessed via a custom Rust→React Native bridge, and seamlessly enriched by enrichment AI when connectivity is restored.**
 
 ### 3.3 Strategic Pillars (Ranked by Hackathon Importance)
 
 1. **Technical depth that impresses Qdrant judges.** The Rust bridge is the headline. Without it, the entry is "yet another mobile app that talks to a vector DB." With it, the entry is "we made Qdrant Edge first-class on React Native."
 2. **End-to-end demo that Paytm judges remember.** Offline toggle → search → sync → enrichment → dashboard. Three minutes, no setup.
-3. **Realistic vertical that Cloudinary judges recognize.** Field-media-for-impact is a known Cloudinary use case (their own marketing page lists "NGO and sustainability organizations" as a customer segment).
+3. **Realistic vertical that enrichment judges recognize.** Field-media-for-impact is a known enrichment use case (their own marketing page lists "NGO and sustainability organizations" as a customer segment).
 4. **Engineering hygiene.** Lockfile committed, reproducible builds, README that works on a fresh clone, no secrets in the repo, clean module boundaries.
 
 ### 3.4 Anti-Goals (Explicitly NOT Pursuing)
@@ -157,7 +157,7 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 - Capture → instant semantic search by description.
 - Auto-extracts GPS and timestamps.
 - One-tap sync when she reaches town.
-- Cloudinary enrichment happens while she showers; she returns to a dashboard of pre-tagged media.
+- enrichment happens while she showers; she returns to a dashboard of pre-tagged media.
 
 ### 4.2 Persona 2 — Carlos, the Infrastructure Inspector (Secondary)
 
@@ -179,9 +179,9 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 **How FieldEdge Helps Him**
 - Captures are time-stamped and GPS-stamped at the moment of capture.
 - Semantic search surfaces "the same site" via visual similarity.
-- Sync to central Qdrant + Cloudinary yields a compliance-ready timeline.
+- Sync to central Qdrant + enrichment yields a compliance-ready timeline.
 
-### 4.3 Persona 3 — Dr. Anika, the HQ Analyst (Tertiary, Owned by Cloudinary Track)
+### 4.3 Persona 3 — Dr. Anika, the HQ Analyst (Tertiary, Owned by enrichment Track)
 
 **Demographics**
 - Age: 38
@@ -194,7 +194,7 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 - Generate monthly impact stories for donor reports.
 
 **How FieldEdge Helps Her (Indirectly)**
-- Mihir's Cloudinary dashboard consumes the synced data. FieldEdge is the upstream that ensures the data arrives organized and enriched.
+- Mihir's separate dashboard consumes the synced data. FieldEdge is the upstream that ensures the data arrives organized and enriched.
 
 ### 4.4 Persona 4 — The Paytm Product Manager (Judge Persona)
 
@@ -235,7 +235,7 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 - **Action:** She taps "Sync now" when she reaches a cafe with Wi-Fi.
 - **Touchpoints:** Sync progress screen.
 - **Emotions:** Relieved.
-- **System state:** WAL replay → diff against central cluster → conflict resolution → upload of new + modified points → fetch of cloud-side enrichments (Cloudinary tags added by Mihir's pipeline) → update local point payloads → "Synced 12 photos. Cloudinary enriched 9 of them."
+- **System state:** WAL replay → diff against central cluster → conflict resolution → upload of new + modified points → fetch of cloud-side enrichments (enrichment tags added by Mihir's pipeline) → update local point payloads → "Synced 12 photos. enrichment enriched 9 of them."
 
 **Stage 5 — Post-Sync (HQ)**
 - **Action:** Dr. Anika logs into the dashboard.
@@ -345,7 +345,7 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 - **so that** I can verify the match before sharing it.
 
 **Acceptance Criteria**
-- AC-012.1: Tapping a result opens a detail screen with the full image, timestamp, GPS, project, and (if synced) Cloudinary tags.
+- AC-012.1: Tapping a result opens a detail screen with the full image, timestamp, GPS, project, and (if synced) enrichment tags.
 - AC-012.2: The detail screen supports pinch-to-zoom.
 - AC-012.3: A "Share" button generates a `file://` URL for export to other apps (v1: OS share sheet).
 
@@ -521,10 +521,10 @@ Every field worker in the world — researcher, inspector, responder, ranger —
   "project_id": "string",
   "file_path": "relative/path/from/app_docs",
   "embedding_status": "ok | pending | failed",
-  "cloudinary_public_id": "string | null",
-  "cloudinary_tags": ["string"],
-  "cloudinary_objects": [{"label": "string", "box": [x, y, w, h], "confidence": float}],
-  "cloudinary_ocr_text": "string | null",
+  "enrichment_id": "string | null",
+  "enrichment_tags": ["string"],
+  "enrichment_objects": [{"label": "string", "box": [x, y, w, h], "confidence": float}],
+  "enrichment_text": "string | null",
   "synced_at": "ISO-8601 | null",
   "local_updated_at": "ISO-8601",
   "vector_checksum": "sha256:hex"
@@ -556,7 +556,7 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 **FR-052 [P0, device]** The application shall fetch cloud-only updates via `GET /sync/pull?since=<cursor>` and apply them locally.
 - Rationale: Bidirectional sync.
 
-**FR-053 [P0, server]** The sync API shall return Cloudinary-enriched payloads as part of the pull response so the edge learns about cloud tags without a separate round trip.
+**FR-053 [P0, server]** The sync API shall return enrichment-enriched payloads as part of the pull response so the edge learns about cloud tags without a separate round trip.
 - Rationale: Reduces round trips; Mihir's pipeline writes enrichment once, edge picks it up on next pull.
 
 **FR-054 [P0, device+server]** Both sides shall detect conflicts by comparing `local_updated_at`, `captured_at`, and `vector_checksum`.
@@ -618,7 +618,7 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 
 ### 7.11 Cloud Enrichment Handoff
 
-**FR-090 [P0, server]** When the central Qdrant cluster receives a new point via the sync API, it shall trigger Mihir's Cloudinary enrichment pipeline (out of scope for this PRD but referenced here for the contract).
+**FR-090 [P0, server]** When the central Qdrant cluster receives a new point via the sync API, it shall trigger Mihir's separate enrichment pipeline (out of scope for this PRD but referenced here for the contract).
 - Rationale: Cross-track contract.
 
 **FR-091 [P0, server]** Enrichment results shall be written back to the same point's payload under `cloudinary_*` fields and SHALL NOT modify `vector`, `device_id`, `captured_at`, or `lat`/`lng`.
@@ -791,7 +791,7 @@ Every field worker in the world — researcher, inspector, responder, ranger —
 - ❌ Video semantic embedding (perceptual hash only)
 - ❌ Peer-to-peer device sync (central cluster only)
 - ❌ Server-side analytics dashboard (Mihir's track owns this)
-- ❌ Cloudinary integration (Mihir's track owns this)
+- ❌ enrichment integration (Mihir's track owns this)
 - ❌ iPad / tablet optimized layouts
 - ❌ Encrypted at-rest photos (platform-native only)
 - ❌ Background uploads when app is killed
@@ -835,7 +835,7 @@ The hackathon window is **~10 days** (deadline 2025-10-03). Below is the day-by-
 | **Day 1** | Scaffold RN app, init Rust crate, UniFFI bindings, "Hello edge_create" smoke test | Lock sync API contract (Section 7.7) |
 | **Day 2** | Wire `edge_create`/`edge_load`/`upsert`/`query` end-to-end through TypeScript | Deploy stub sync API to Railway |
 | **Day 3** | CLIP model load + inference pipeline + first embedding in Edge | Connect central Qdrant cluster |
-| **Day 4** | Capture screen + camera + EXIF GPS extraction | Sync API `/upload` and `/pull` working with stub Cloudinary |
+| **Day 4** | Capture screen + camera + EXIF GPS extraction | Sync API `/upload` and `/pull` working with stub enrichment |
 | **Day 5** | Search screen + CLIP text encoder + result grid | Conflict-resolution algorithm implemented |
 | **Day 6** | Sync orchestrator + WAL + idempotency | First end-to-end offline→online flow |
 | **Day 7** | Sync report UI + auto-sync toggle + demo seed | Polish, error states, edge cases |
@@ -866,7 +866,7 @@ The hackathon window is **~10 days** (deadline 2025-10-03). Below is the day-by-
 | R-04 | Sync API server cold-starts on free-tier Railway (sync latency spikes) | High | Medium | Implement client-side retry with exponential backoff. Add a "warm-up" cron job. |
 | R-05 | Qdrant Edge beta API changes mid-hackathon | Low | High | Pin to a specific version in `Cargo.toml`. Note in README that Edge SDK is in beta. |
 | R-06 | Demo video recording fails on Day 9 | Medium | High | Record multiple takes on Day 8. Have a screen-capture fallback. |
-| R-07 | Mihir's Cloudinary track runs behind | Medium | High | Day 1 sync contract locks the API. Mihir can stub his side; Manas can stub the cloudinary_* fields with `null` initially. |
+| R-07 | Mihir's track runs behind | Medium | High | Day 1 sync contract locks the API. Mihir can stub his side; Manas can stub the cloudinary_* fields with `null` initially. |
 | R-08 | Mid-range Android device cannot run CLIP in <1 sec | Medium | Medium | Document target devices clearly. Use Galaxy A35 / Pixel 6a as benchmarks. If needed, switch to ONNX Runtime with NNAPI acceleration. |
 | R-09 | Qdrant cluster free-tier rate limit hits during demo | Medium | Medium | Pre-warm the cluster with seed data before the demo. Have a backup local-mode fallback on the dashboard side. |
 | R-10 | Time-zone differences between team members cause coordination issues | Low | Medium | Daily 15-min sync at fixed time. Async-first updates in shared Slack/Discord channel. |
@@ -881,7 +881,7 @@ The hackathon window is **~10 days** (deadline 2025-10-03). Below is the day-by-
 - AS-02: A modern Mac with Xcode 15+ is available for iOS builds.
 - AS-03: A modern Linux or macOS machine is available for Android builds and Rust compilation.
 - AS-04: The Qdrant Cloud free tier remains available for the duration of the hackathon.
-- AS-05: Cloudinary's free tier provides enough credits for the demo dataset (50 photos + a few videos).
+- AS-05: enrichment's free tier provides enough credits for the demo dataset (50 photos + a few videos).
 - AS-06: Judges are familiar with React Native but not necessarily with Rust or Qdrant Edge specifically.
 
 ### 14.2 Constraints
@@ -890,7 +890,7 @@ The hackathon window is **~10 days** (deadline 2025-10-03). Below is the day-by-
 - C-02: Team is 2 people.
 - C-03: Total development budget is ~10 days.
 - C-04: Final round is at Paytm office; demo must run offline-resilient.
-- C-05: The chosen problem statements are PS03 (Qdrant Edge) and PS02 (Cloudinary); submission must address both.
+- C-05: The chosen problem statements are PS03 (Qdrant Edge) and PS02 (enrichment); submission must address both.
 - C-06: All code must be open-source-compatible (no proprietary dependencies that block judges from running it).
 
 ---

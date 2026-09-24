@@ -19,10 +19,10 @@ class PointPayload(BaseModel):
     project_id: str
     file_path: str
     embedding_status: Literal["ok", "pending", "failed"] = "ok"
-    cloudinary_public_id: str | None = None
-    cloudinary_tags: list[str] = Field(default_factory=list)
-    cloudinary_objects: list[dict[str, Any]] = Field(default_factory=list)
-    cloudinary_ocr_text: str | None = None
+    enrichment_id: str | None = None
+    enrichment_tags: list[str] = Field(default_factory=list)
+    enrichment_objects: list[dict[str, Any]] = Field(default_factory=list)
+    enrichment_text: str | None = None
     synced_at: datetime | None = None
     local_updated_at: datetime
     vector_checksum: str
