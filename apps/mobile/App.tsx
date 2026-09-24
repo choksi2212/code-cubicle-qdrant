@@ -21,10 +21,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { fieldEdge, QueryHit } from './src/native/fieldEdge';
+import { fieldEdge } from './src/native/fieldEdge';
 import { useSyncStore } from './src/stores/syncStore';
-import { runSync, SyncMetrics } from './src/services/sync';
-import { FIELD_SHARD_DIR } from './src/config';
+import { SyncMetrics } from './src/services/sync';
+import { apiClient } from './src/services/api';
+import { FIELD_SHARD_DIR, getDeviceToken } from './src/config';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { CaptureScreen } from './src/screens/CaptureScreen';
 import { SyncReportScreen } from './src/screens/SyncReportScreen';
@@ -37,7 +38,7 @@ export default function App() {
   const [pointCount, setPointCount] = useState(0);
   const [version, setVersion] = useState<{ status: string; value?: { crate: string; version: string; rust_version: string; features: Record<string, boolean> } } | null>(null);
   const [syncReport, setSyncReport] = useState<SyncMetrics | null>(null);
-  const { status, setStatus } = useSyncStore();
+  const { status, lastReport, triggerSync, setPendingCount } = useSyncStore();
 
   useEffect(() => {
     initialize();
@@ -45,6 +46,10 @@ export default function App() {
 
   const initialize = async () => {
     try {
+      // Initialize device identity + Bearer token before anything hits the API.
+      const token = await getDeviceToken();
+      apiClient.setToken(token);
+
       const ver = await fieldEdge.version();
       setVersion(ver);
 
@@ -57,6 +62,7 @@ export default function App() {
 
       const count = await fieldEdge.pointCount();
       setPointCount(count);
+      setPendingCount(count);
     } catch (err) {
       Alert.alert('Init failed', String(err));
       setShardStatus('❌ Failed');
@@ -71,19 +77,17 @@ export default function App() {
     );
     const count = await fieldEdge.pointCount();
     setPointCount(count);
+    setPendingCount(count);
   };
 
   const runSyncFlow = async () => {
     try {
-      setStatus('syncing');
-      const report = await runSync(undefined, (msg) =>
-        console.log('[sync]', msg),
-      );
-      setSyncReport(report);
-      setStatus('complete');
+      const report = await triggerSync();
+      // Always show the report — even on errors — so the user sees what happened.
+      setSyncReport(report ?? lastReport);
       setScreen('report');
     } catch (err) {
-      setStatus('error');
+      // Store-level error (only if runSync itself throws; it now catches internally).
       Alert.alert('Sync failed', String(err));
     }
   };

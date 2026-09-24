@@ -1,8 +1,18 @@
 /**
  * HTTP client for the FieldEdge sync API.
+ *
+ * The sync API requires `Authorization: Bearer dev_<device_id>` (any
+ * non-empty token ≥8 chars works in v1 — see apps/sync-api/app/auth.py).
+ * The token is set once at app start via `setToken()` from the persisted
+ * device ID.
+ *
+ * All requests have a configurable timeout via AbortController so a hung
+ * server (e.g. Render cold-start) can't freeze the UI.
  */
 
-const SYNC_API_URL = process.env.SYNC_API_URL ?? 'http://localhost:8000';
+import { SYNC_API_URL } from '../config';
+
+const DEFAULT_TIMEOUT_MS = 25_000;
 
 export interface UploadResult {
   id: string;
@@ -18,13 +28,15 @@ export interface UploadResponse {
   next_cursor: string;
 }
 
+export interface PullPoint {
+  id: string;
+  vector: number[];
+  payload: Record<string, unknown>;
+}
+
 export interface PullResponse {
   server_time: string;
-  points: Array<{
-    id: string;
-    vector: number[];
-    payload: Record<string, unknown>;
-  }>;
+  points: PullPoint[];
   next_cursor: string;
   has_more: boolean;
 }
@@ -38,12 +50,21 @@ export interface HeartbeatResponse {
 
 class ApiClient {
   private token: string | null = null;
+  private timeoutMs: number = DEFAULT_TIMEOUT_MS;
 
   setToken(token: string) {
     this.token = token;
   }
 
-  private headers(): HeadersInit {
+  getToken(): string | null {
+    return this.token;
+  }
+
+  setTimeoutMs(ms: number) {
+    this.timeoutMs = ms;
+  }
+
+  private headers(): Record<string, string> {
     const h: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -51,37 +72,71 @@ class ApiClient {
     return h;
   }
 
+  /** fetch with an AbortController-based timeout so we never hang forever. */
+  private async fetchWithTimeout(
+    url: string,
+    init: RequestInit,
+    timeoutMs: number = this.timeoutMs,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async uploadBatch(req: {
     device_id: string;
     batch_id: string;
     points: Array<{ id: string; vector: number[]; payload: Record<string, unknown> }>;
   }): Promise<UploadResponse> {
-    const resp = await fetch(`${SYNC_API_URL}/sync/upload`, {
+    const resp = await this.fetchWithTimeout(`${SYNC_API_URL}/sync/upload`, {
       method: 'POST',
       headers: this.headers(),
       body: JSON.stringify(req),
     });
-    if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(`Upload failed: ${resp.status} ${body.slice(0, 200)}`);
+    }
     return resp.json();
   }
 
-  async pullUpdates(params: { since?: string; device_id: string; limit?: number }): Promise<PullResponse> {
-    const url = new URL(`${SYNC_API_URL}/sync/pull`);
-    if (params.since) url.searchParams.set('since', params.since);
-    url.searchParams.set('device_id', params.device_id);
-    url.searchParams.set('limit', String(params.limit ?? 100));
+  async pullUpdates(params: {
+    since?: string;
+    device_id: string;
+    limit?: number;
+  }): Promise<PullResponse> {
+    // React Native ships a minimal WHATWG URL impl that doesn't implement
+    // URLSearchParams.set on Android. Build the query string by hand.
+    const qs: string[] = [];
+    if (params.since) qs.push(`since=${encodeURIComponent(params.since)}`);
+    qs.push(`device_id=${encodeURIComponent(params.device_id)}`);
+    qs.push(`limit=${encodeURIComponent(String(params.limit ?? 100))}`);
+    const url = `${SYNC_API_URL}/sync/pull?${qs.join('&')}`;
 
-    const resp = await fetch(url.toString(), {
+    const resp = await this.fetchWithTimeout(url, {
       method: 'GET',
       headers: this.headers(),
     });
-    if (!resp.ok) throw new Error(`Pull failed: ${resp.status}`);
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(`Pull failed: ${resp.status} ${body.slice(0, 200)}`);
+    }
     return resp.json();
   }
 
   async heartbeat(): Promise<HeartbeatResponse> {
-    const resp = await fetch(`${SYNC_API_URL}/sync/heartbeat`);
-    if (!resp.ok) throw new Error(`Heartbeat failed: ${resp.status}`);
+    const resp = await this.fetchWithTimeout(`${SYNC_API_URL}/sync/heartbeat`, {
+      method: 'GET',
+      headers: this.headers(),
+    });
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(`Heartbeat failed: ${resp.status} ${body.slice(0, 200)}`);
+    }
     return resp.json();
   }
 }

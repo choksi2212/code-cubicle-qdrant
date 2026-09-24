@@ -11,13 +11,12 @@
  */
 
 import { Platform } from 'react-native';
-import { ulid } from 'ulid';
+import { uuidv4 } from '../util/uuid';
 import { fieldEdge, Payload } from '../native/fieldEdge';
 import { embedImage } from '../embedding/clip';
 import { captureGps } from './location';
-import { deviceId } from '../config';
+import { getDeviceId, WAL_PATH } from '../config';
 
-const SHARD_DIR = '/data/data/com.fieldedge/files/edge-shard';
 const PROJECT_DEFAULT = 'unassigned';
 
 export interface CaptureInput {
@@ -49,9 +48,10 @@ export async function processCapture(input: CaptureInput): Promise<CaptureResult
     throw new Error('Capture is only supported on Android');
   }
 
-  const photoId = ulid();
+  const photoId = uuidv4();
   const capturedAt = new Date().toISOString();
   const projectId = input.projectId || PROJECT_DEFAULT;
+  const deviceIdStr = await getDeviceId();
 
   // 1. GPS: try EXIF on the photo, then device location
   const { coords: gps, source: gpsSource } = await captureGps(input.photoUri);
@@ -70,13 +70,13 @@ export async function processCapture(input: CaptureInput): Promise<CaptureResult
   const payload: Payload = {
     schema_version: 1,
     photo_id: photoId,
-    device_id: deviceId,
+    device_id: deviceIdStr,
     captured_at: capturedAt,
     lat: gps?.lat ?? null,
     lng: gps?.lng ?? null,
     gps_status: gps ? 'ok' : 'unavailable',
     project_id: projectId,
-    file_path: `${projectId}/${deviceId}/${photoId}.jpg`,
+    file_path: `${projectId}/${deviceIdStr}/${photoId}.jpg`,
     embedding_status: 'ok',
     cloudinary_public_id: null,
     cloudinary_tags: [],
@@ -96,11 +96,9 @@ export async function processCapture(input: CaptureInput): Promise<CaptureResult
   }
 
   // 6. Append to WAL (sync queue).
-  //    Strip the `vector` and `payload` from the WAL entry — the server
-  //    has them via the upload batch. WAL stores only id/checksum/metadata.
-  //    This sidesteps the column-7288 PARSE_ERROR we hit when serializing
-  //    the full 512-float vector + payload via the RN bridge.
-  await fieldEdge.walAppend(`${SHARD_DIR}/sync.wal`, JSON.stringify({
+  //    WAL records the upload intention; the actual upload pulls the full
+  //    payload+vector from the local shard.
+  await fieldEdge.walAppend(WAL_PATH, JSON.stringify({
     op: 'upsert',
     seq: Date.now(),
     point_id: photoId,

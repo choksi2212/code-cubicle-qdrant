@@ -1,25 +1,54 @@
 /**
- * App-wide configuration. Loaded from .env at build time.
+ * App-wide configuration.
  *
- * In v1 we hardcode values; a future v2 should load from MMKV or env.
+ * Device ID is generated on first launch with ulid() and persisted via
+ * AsyncStorage so it survives reinstalls of the JS bundle. The sync API
+ * accepts the token `dev_<deviceId>` (see apps/sync-api/app/auth.py).
  */
 
-import { NativeModules, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import { ulid } from 'ulid';
 
 // ─── Device identity ─────────────────────────────────────────────────────────
 
-/**
- * Per-install device ID. Generated once and stored in Keychain/Keystore
- * by the native side; here we fall back to a random ULID at first launch.
- */
+const DEVICE_ID_KEY = '@fieldedge/device_id';
+const DEVICE_TOKEN_KEY = '@fieldedge/device_token';
+
 let _deviceId: string | null = null;
+let _deviceToken: string | null = null;
+
+/**
+ * Read or generate the per-install device ID.
+ *
+ * - First launch: ulid() → AsyncStorage → return.
+ * - Subsequent launches: read from AsyncStorage, cache in memory.
+ *
+ * The sync API's auth uses the token `dev_<deviceId>` (≥8 chars after the
+ * `dev_` prefix satisfies the length check).
+ */
 export async function getDeviceId(): Promise<string> {
   if (_deviceId) return _deviceId;
-  _deviceId = `dev_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-  return _deviceId;
+  const stored = await AsyncStorage.getItem(DEVICE_ID_KEY);
+  if (stored) {
+    _deviceId = stored;
+    return stored;
+  }
+  const fresh = ulid();
+  await AsyncStorage.setItem(DEVICE_ID_KEY, fresh);
+  _deviceId = fresh;
+  return fresh;
 }
 
-export const deviceId = `dev_placeholder`;
+/**
+ * Return the Bearer token the sync API expects. Derived from the device ID.
+ */
+export async function getDeviceToken(): Promise<string> {
+  if (_deviceToken) return _deviceToken;
+  const id = await getDeviceId();
+  _deviceToken = `dev_${id}`;
+  return _deviceToken;
+}
 
 // ─── Server endpoints ────────────────────────────────────────────────────────
 
@@ -27,21 +56,25 @@ export const deviceId = `dev_placeholder`;
  * Sync API endpoint.
  *
  * Priority:
- *   1. Process env SYNC_API_URL (injected at bundle time by `metro.config.js`)
- *   2. Android emulator → host machine (10.0.2.2)
- *   3. Physical device → LAN IP of dev machine
- *   4. Production → Render URL (set SYNC_API_URL when bundling release)
+ *   1. process.env.SYNC_API_URL (only inlined if the babel env-vars plugin
+ *      is configured; otherwise this branch is dead)
+ *   2. Production → Render URL (default for the hackathon demo so the
+ *      bundle works out-of-the-box on physical devices)
+ *   3. Android emulator → host machine (10.0.2.2) — used for local dev
+ *   4. Other platforms → localhost
  */
 const ENV_URL = (typeof process !== 'undefined' && process.env && process.env.SYNC_API_URL)
   ? process.env.SYNC_API_URL
   : null;
 
 export const SYNC_API_URL: string = (() => {
-  if (ENV_URL) return ENV_URL;
+  if (ENV_URL && ENV_URL.length > 0) return ENV_URL;
+  // Default to the deployed Render service so the demo works without any
+  // extra configuration. Override at bundle time by setting
+  // SYNC_API_URL=http://10.0.2.2:8000 (emulator) or a LAN IP for a
+  // physical device pointed at a local FastAPI server.
   if (Platform.OS === 'android') {
-    // 10.0.2.2 = Android emulator → host localhost.
-    // For physical device against local server, replace with LAN IP.
-    return 'http://10.0.2.2:8000';
+    return 'https://code-cubicle-qdrant.onrender.com';
   }
   return 'http://localhost:8000';
 })();
@@ -52,6 +85,9 @@ export const FIELD_SHARD_DIR = (() => {
   }
   return './edge-shard';
 })();
+
+/** Same path as FIELD_SHARD_DIR plus the canonical WAL filename. */
+export const WAL_PATH = `${FIELD_SHARD_DIR}/sync.wal`;
 
 // ─── Feature flags ───────────────────────────────────────────────────────────
 

@@ -2,33 +2,25 @@
  * Real sync orchestrator.
  *
  * Flow:
- *   1. Read WAL entries (point_id + checksum + project_id)
- *   2. Look up each point's full payload + vector from the local Rust shard
- *   3. Compute diff: local vs remote (Qdrant Cloud snapshot)
- *   4. Upload new points via POST /sync/upload
- *   5. Pull remote updates via GET /sync/pull
- *   6. Resolve conflicts via Rust bridge
- *   7. Apply resolved points to local Edge shard
- *   8. Emit SyncReport for UI
+ *   1. Read pending entries from the WAL (append-only log written by capture.ts)
+ *   2. Look up each pending point's full vector+payload in the local Rust shard
+ *   3. Upload the batch to the sync API (`POST /sync/upload`)
+ *   4. Pull remote updates (`GET /sync/pull`)
+ *   5. Upsert pulled points into the local shard
+ *   6. Return SyncMetrics so the UI can render the report
  *
- * The orchestrator is idempotent: re-running after a partial failure
- * picks up where it left off.
+ * Notes:
+ *   - The sync API authenticates with `Authorization: Bearer dev_<deviceId>`
+ *     and deduplicates uploads by point ID (upsert).
+ *   - All HTTP calls use AbortController timeouts so a hung server can't
+ *     freeze the UI.
+ *   - WAL entries stay on disk after upload; server dedup makes re-uploads
+ *     cheap, and keeping them gives us a crash-recovery trail.
  */
 
-import { fieldEdge, Payload, SyncDiff, ConflictDecision } from '../native/fieldEdge';
+import { fieldEdge, Payload } from '../native/fieldEdge';
 import { apiClient } from './api';
-import { deviceId } from '../config';
-
-const WAL_PATH_DEFAULT = '/data/data/com.fieldedge/files/edge-shard/sync.wal';
-
-interface WalEntry {
-  op: 'upsert' | 'delete' | 'optimize_hint';
-  point_id: string;
-  vector_checksum: string;
-  project_id: string;
-  ts: string;
-  sync_state: 'pending' | 'synced' | 'failed';
-}
+import { getDeviceId, WAL_PATH } from '../config';
 
 export interface SyncMetrics {
   startedAt: Date;
@@ -42,8 +34,18 @@ export interface SyncMetrics {
   bytesDownloaded: number;
 }
 
+export type { SyncMetrics as SyncReport };
+
+interface WalEntryLike {
+  op: string;
+  seq: number;
+  point_id: string | null;
+  ts: string;
+  sync_state: string;
+}
+
 export async function runSync(
-  walPath: string = WAL_PATH_DEFAULT,
+  _unused?: string,
   onProgress?: (msg: string) => void,
 ): Promise<SyncMetrics> {
   const startedAt = new Date();
@@ -59,99 +61,103 @@ export async function runSync(
     bytesDownloaded: 0,
   };
 
-  onProgress?.('Reading pending writes…');
-
-  // 1. Read pending WAL entries.
-  //    WAL may not exist yet — treat as empty.
-  let walEntries: WalEntry[] = [];
+  // Make sure we have a Bearer token set on the API client before any request.
+  let deviceId: string;
   try {
-    const walJson = await fieldEdge.walReadAll(walPath);
-    const parsed = JSON.parse(walJson);
-    if (parsed && Array.isArray(parsed)) {
-      walEntries = parsed;
+    deviceId = await getDeviceId();
+    if (!apiClient.getToken()) {
+      apiClient.setToken(`dev_${deviceId}`);
     }
   } catch (e) {
-    console.warn('[sync] wal read failed, treating as empty:', e);
-  }
-
-  const pending = walEntries.filter(
-    (e) => e.op === 'upsert' && e.sync_state === 'pending',
-  );
-
-  onProgress?.(`Found ${pending.length} pending uploads`);
-
-  // 2. Look up full point data (id + vector + payload) from local shard.
-  const localPoints: Array<{
-    id: string;
-    vector: number[];
-    payload: Payload;
-  }> = [];
-  if (pending.length > 0) {
-    try {
-      const ids = pending.map((e) => e.point_id);
-      const lookupJson = await fieldEdge.retrieve(ids);
-      const lookupResp = JSON.parse(lookupJson);
-      if (lookupResp?.value && Array.isArray(lookupResp.value)) {
-        for (const p of lookupResp.value) {
-          localPoints.push({
-            id: p.id,
-            vector: p.vector,
-            payload: p.payload,
-          });
-        }
-      }
-    } catch (e) {
-      console.warn('[sync] local lookup failed:', e);
-    }
-  }
-
-  if (localPoints.length === 0) {
+    onProgress?.(`Failed to read device id: ${String(e)}`);
+    metrics.errors++;
     metrics.finishedAt = new Date();
-    onProgress?.('Nothing to upload');
     return metrics;
   }
 
-  // 3. Upload batch to the sync API.
   try {
-    const batchId = `${startedAt.toISOString()}-${deviceId}`;
-    const req = {
-      device_id: deviceId,
-      batch_id: batchId,
-      points: localPoints,
-    };
-    const resp = await apiClient.uploadBatch(req);
-    metrics.uploaded += resp.results.filter((r) => r.status === 'accepted').length;
-    metrics.conflicts += resp.results.filter(
-      (r) => r.status === 'conflict_resolved',
-    ).length;
-    metrics.resolved += resp.results.filter(
-      (r) => r.status === 'conflict_resolved',
-    ).length;
-    metrics.errors += resp.results.filter((r) => r.status === 'error').length;
-    onProgress?.(`Uploaded ${metrics.uploaded} points`);
-  } catch (e) {
-    console.error('[sync] upload batch failed:', e);
-    metrics.errors++;
-  }
+    onProgress?.('Reading WAL…');
+    const walEntries = await fieldEdge.walReadAll(WAL_PATH);
+    const pending = walEntries.filter(
+      (e: WalEntryLike) => e.op === 'upsert' && e.sync_state === 'pending' && !!e.point_id,
+    );
 
-  // 4. Pull remote updates
-  try {
-    onProgress?.('Pulling remote updates…');
-    const pull = await apiClient.pullUpdates({
-      device_id: deviceId,
-      limit: 100,
-    });
+    onProgress?.(`WAL has ${walEntries.length} entries (${pending.length} pending upload)`);
 
-    for (const p of pull.points) {
-      const payload = p.payload as unknown as Payload;
-      await fieldEdge.upsertPoints([
-        { id: p.id, vector: p.vector, payload },
-      ]);
-      metrics.downloaded++;
+    // 1+2. Upload pending WAL entries.
+    if (pending.length > 0) {
+      const pointIds = pending.map((e: WalEntryLike) => e.point_id!) as string[];
+      onProgress?.(`Looking up ${pointIds.length} points in local shard…`);
+      const localPoints = await fieldEdge.retrieve(pointIds);
+      onProgress?.(`Retrieved ${localPoints.length} points — uploading batch…`);
+
+      if (localPoints.length > 0) {
+        try {
+          const resp = await apiClient.uploadBatch({
+            device_id: deviceId,
+            batch_id: `${startedAt.toISOString()}-${deviceId}`,
+            points: localPoints.map((p) => ({
+              id: p.id,
+              vector: p.vector,
+              payload: p.payload as unknown as Record<string, unknown>,
+            })),
+          });
+
+          let accepted = 0;
+          let errored = 0;
+          for (const r of resp.results) {
+            if (r.status === 'accepted' || r.status === 'deduplicated') {
+              accepted++;
+            } else if (r.status === 'conflict_resolved') {
+              accepted++;
+              metrics.conflicts++;
+              metrics.resolved++;
+            } else {
+              errored++;
+            }
+          }
+          metrics.uploaded = accepted;
+          metrics.errors += errored;
+
+          // Bytes accounting (approximate — vector floats + JSON envelope).
+          metrics.bytesUploaded = localPoints.reduce(
+            (acc, p) => acc + p.vector.length * 4 + JSON.stringify(p.payload).length,
+            0,
+          );
+
+          onProgress?.(`Upload done: ${accepted} accepted, ${errored} errors`);
+        } catch (e) {
+          onProgress?.(`Upload batch failed: ${String(e)}`);
+          metrics.errors++;
+        }
+      } else {
+        onProgress?.('No local points matched WAL pending set (shard may be empty)');
+      }
     }
-    onProgress?.(`Pulled ${metrics.downloaded} points`);
+
+    // 3. Pull remote updates.
+    try {
+      onProgress?.('Pulling remote updates…');
+      const pull = await apiClient.pullUpdates({
+        device_id: deviceId,
+        limit: 100,
+      });
+
+      for (const p of pull.points) {
+        const payload = p.payload as unknown as Payload;
+        await fieldEdge.upsertPoints([
+          { id: p.id, vector: p.vector, payload },
+        ]);
+        metrics.downloaded++;
+        metrics.bytesDownloaded += p.vector.length * 4 + JSON.stringify(p.payload).length;
+      }
+      onProgress?.(`Pulled ${metrics.downloaded} points from server`);
+    } catch (e) {
+      onProgress?.(`Pull failed: ${String(e)}`);
+      metrics.errors++;
+    }
   } catch (e) {
-    console.error('[sync] pull failed:', e);
+    onProgress?.(`Sync failed: ${String(e)}`);
     metrics.errors++;
   }
 

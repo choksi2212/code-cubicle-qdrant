@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SyncReport } from '../services/sync';
+import { SyncMetrics as SyncReport } from '../services/sync';
 
 interface Props {
   report: SyncReport | null;
