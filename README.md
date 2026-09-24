@@ -10,12 +10,37 @@ Built for the **Code Cubicle × Paytm × Qdrant × Cloudinary** hackathon (2025)
 
 ---
 
+## 🎯 Scope: This repo is **PS03 — Qdrant Edge** only
+
+This repository addresses **PS03 (Qdrant Edge)** of the hackathon problem statements.
+
+| PS | Track | Owner | What's here |
+|---|---|---|---|
+| **PS03** | **Qdrant Edge** | **Manas (this repo)** | Everything below: Rust bridge, ONNX CLIP, local Qdrant Edge shard, sync API, conflict resolution |
+| PS02 | Cloudinary | Mihir (separate repo) | Cloudinary AI tagging, dashboard UI, impact-story generator |
+
+**Contract boundary** — PS02 consumes what PS03 produces. We define the schema; Mihir fills it.
+
+- The `cloudinary_public_id`, `cloudinary_tags`, `cloudinary_objects`, `cloudinary_ocr_text`
+  fields in [`Payload`](apps/mobile/src/native/fieldEdge.ts) are **reserved** for PS02.
+  We always write `null` / `[]` on capture; PS02's pipeline populates them server-side.
+- The sync API accepts `cloudinary_*` in pull responses unchanged so the edge learns
+  about cloud tags without a separate round trip (FR-053).
+- The `cloudinary_*` env vars in `apps/sync-api/app/config.py` are declared for PS02
+  to read; PS03's code never calls the Cloudinary API.
+
+**No Cloudinary SDK is installed in either `apps/mobile/package.json` or
+`apps/sync-api/pyproject.toml`.** Cloudinary is intentionally out of scope for this repo.
+
+---
+
 ## 🎬 The Demo (3 minutes)
 
 1. **Airplane mode ON.** Open the app. Capture 3 photos of a polluted river.
 2. **Search offline.** Type "river pollution". Get matching photos in <500ms.
 3. **Airplane mode OFF.** Tap "Sync now". Watch the central Qdrant cluster populate.
-4. **Dashboard opens.** Mihir's Cloudinary dashboard shows the same photos with AI tags and a generated impact story.
+4. **PS02 takes over.** Mihir's Cloudinary dashboard (separate repo) ingests the same
+   photos, attaches AI tags, and generates the impact story.
 
 ---
 
@@ -35,35 +60,48 @@ Built for the **Code Cubicle × Paytm × Qdrant × Cloudinary** hackathon (2025)
 ## 🏗️ Architecture (TL;DR)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Android Device                              │
-│                                                                 │
-│  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌──────────────┐    │
-│  │  RN UI  │──▶│ Turbo-  │──▶│ ONNX    │   │   Qdrant     │    │
-│  │ (TS)    │   │ Module  │   │ Runtime │   │   Edge       │    │
-│  └────┬────┘   └────┬────┘   └─────────┘   └──────┬───────┘    │
-│       │             │ JSI/UniFFI                   │            │
-│       │             ▼                              │            │
-│       │      ┌──────────────┐                      │            │
-│       └─────▶│  libfield_   │◀─────────────────────┘            │
-│              │  edge_rust.so │ (Rust core via FFI)                │
-│              └──────┬───────┘                                    │
-│                     │                                            │
-│             ┌───────▼────────┐                                   │
-│             │  WAL + SQLite  │                                   │
-│             └────────────────┘                                   │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │ HTTPS (when online)
-                          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                          Cloud                                  │
-│                                                                 │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
-│  │  Sync API   │───▶│  Qdrant     │◀──▶│ Cloudinary  │         │
-│  │  (FastAPI)  │    │  Cloud      │    │ (AI tagging) │         │
-│  └─────────────┘    └─────────────┘    └─────────────┘         │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  ╔═══════════════════════════════════════════════════════════════╗   │
+│  ║              PS03 SCOPE — this repo (Manas)                    ║   │
+│  ╠═══════════════════════════════════════════════════════════════╣   │
+│  ║   Android Device                                              ║   │
+│  ║   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌──────────────┐ ║   │
+│  ║   │  RN UI  │──▶│ Turbo-  │──▶│ ONNX    │   │   Qdrant     │ ║   │
+│  ║   │ (TS)    │   │ Module  │   │ Runtime │   │   Edge       │ ║   │
+│  ║   └────┬────┘   └────┬────┘   └─────────┘   └──────┬───────┘ ║   │
+│  ║        │             │  JSI/UniFFI                   │         ║   │
+│  ║        │             ▼                              │         ║   │
+│  ║        │      ┌──────────────┐                      │         ║   │
+│  ║        └─────▶│  libfield_   │◀─────────────────────┘         ║   │
+│  ║               │  edge_rust.so │ (Rust core via FFI)            ║   │
+│  ║               └──────┬───────┘                                 ║   │
+│  ║                      │                                         ║   │
+│  ║              ┌───────▼────────┐                                ║   │
+│  ║              │  WAL + Shard   │                                ║   │
+│  ║              └────────────────┘                                ║   │
+│  ╚════════════════════════════════│══════════════════════════════╝   │
+│                                   │  HTTPS                            │
+│                                   ▼                                   │
+│  ╔════════════════════════════════│═══════════════════════════════╗   │
+│  ║              PS03 SCOPE — sync API (this repo)                ║   │
+│  ╠════════════════════════════════▼═══════════════════════════════╣   │
+│  ║   ┌─────────────┐    ┌─────────────┐                          ║   │
+│  ║   │  Sync API   │───▶│  Qdrant     │  ◀───── shared with    ║   │
+│  ║   │  (FastAPI)  │    │  Cloud      │        PS02 via the    ║   │
+│  ║   └──────┬──────┘    └──────┬──────┘        cloudinary_*    ║   │
+│  ║          │                  │                payload fields ║   │
+│  ╚══════════│══════════════════│════════════════════════════════╝   │
+│             │ contract surface │                                   │
+│             ▼                   ▼                                   │
+│  ╔═══════════════════════════════════════════════════════════════╗   │
+│  ║              PS02 SCOPE — Mihir's separate repo                ║   │
+│  ╠═══════════════════════════════════════════════════════════════╣   │
+│  ║   ┌─────────────┐    ┌─────────────┐                          ║   │
+│  ║   │ Cloudinary  │───▶│  Dashboard  │                          ║   │
+│  ║   │ enrichment  │    │  (Next.js)  │                          ║   │
+│  ║   └─────────────┘    └─────────────┘                          ║   │
+│  ╚═══════════════════════════════════════════════════════════════╝   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
