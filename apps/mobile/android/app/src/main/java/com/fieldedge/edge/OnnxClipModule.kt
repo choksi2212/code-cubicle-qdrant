@@ -1,5 +1,7 @@
 package com.fieldedge.edge
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -9,6 +11,7 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import java.io.File
+import java.io.FileInputStream
 import java.nio.FloatBuffer
 import java.nio.LongBuffer
 import java.util.concurrent.atomic.AtomicBoolean
@@ -177,6 +180,123 @@ class OnnxClipModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun isReady(promise: Promise) {
         promise.resolve(initialized.get())
+    }
+
+    /**
+     * FR-013 — warm up the ONNX sessions at app launch.
+     *
+     * Loads the model files into memory and creates both OrtSession objects
+     * without doing any inference. The first real `embedImage` / `embedText`
+     * call afterwards will skip the ~500 ms cold-start cost. Idempotent:
+     * safe to call multiple times.
+     */
+    @ReactMethod
+    fun warmUp(promise: Promise) {
+        try {
+            if (!initialized.get()) {
+                initModels()
+            }
+            val ready = initialized.get() && visionSession != null && textSession != null
+            if (ready) {
+                promise.resolve(true)
+            } else {
+                promise.reject(
+                    "MODEL_NOT_LOADED",
+                    "CLIP model files not found in assets/models/. " +
+                    "Expected clip-vision-int8.onnx and clip-text-int8.onnx.",
+                )
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "warmUp failed", e)
+            promise.reject("WARMUP_FAILED", e.message, e)
+        }
+    }
+
+    /**
+     * Embed an image directly from a file URI.
+     *
+     * Reads the JPEG/PNG with BitmapFactory, resizes to 224×224 with
+     * bilinear sampling, applies CLIP's per-channel mean/std normalization,
+     * converts HWC→CHW, and runs ONNX inference.
+     *
+     * The TypeScript layer passes `photoUri` (a content:// or file:// path).
+     */
+    @ReactMethod
+    fun embedImageFromUri(uri: String, promise: Promise) {
+        try {
+            if (!initialized.get()) initModels()
+            val s = visionSession
+                ?: return promise.reject(
+                    "MODEL_NOT_LOADED",
+                    "CLIP vision model not loaded. Place clip-vision.onnx in assets/models/",
+                )
+
+            // Resolve content:// URIs by reading through ContentResolver.
+            val bitmap: Bitmap? = if (uri.startsWith("content://")) {
+                reactApplicationContext.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use { input ->
+                    BitmapFactory.decodeStream(input)
+                }
+            } else {
+                val path = if (uri.startsWith("file://")) uri.removePrefix("file://") else uri
+                FileInputStream(File(path)).use { input ->
+                    BitmapFactory.decodeStream(input)
+                }
+            }
+            if (bitmap == null) {
+                return promise.reject("IMAGE_READ_FAILED", "Could not decode image at $uri")
+            }
+
+            val chw = preprocessForClip(bitmap)
+            bitmap.recycle()
+
+            val shape = longArrayOf(1, 3, IMAGE_INPUT_SIZE.toLong(), IMAGE_INPUT_SIZE.toLong())
+            val buffer = FloatBuffer.wrap(chw)
+            val tensor = OnnxTensor.createTensor(ortEnv, buffer, shape)
+            val outputs = s.run(mapOf("pixel_values" to tensor))
+            tensor.close()
+            val embedding = extractEmbedding(outputs)
+            outputs.close()
+            promise.resolve(embedding)
+        } catch (e: Throwable) {
+            Log.e(TAG, "embedImageFromUri failed", e)
+            promise.reject("EMBED_IMAGE_FAILED", e.message, e)
+        }
+    }
+
+    /**
+     * Convert a Bitmap → 224×224 → CHW Float32 normalized for CLIP.
+     *
+     * CLIP mean (RGB): [0.48145466, 0.4578275, 0.40821073]
+     * CLIP std  (RGB): [0.26862954, 0.26130258, 0.27577711]
+     */
+    private fun preprocessForClip(bitmap: Bitmap): FloatArray {
+        val w = IMAGE_INPUT_SIZE
+        val h = IMAGE_INPUT_SIZE
+        val resized = Bitmap.createScaledBitmap(bitmap, w, h, true)
+        try {
+            // ARGB_8888 → extract RGB ints
+            val pixels = IntArray(w * h)
+            resized.getPixels(pixels, 0, w, 0, 0, w, h)
+            val out = FloatArray(1 * 3 * h * w)
+            val meanR = 0.48145466f
+            val meanG = 0.4578275f
+            val meanB = 0.40821073f
+            val stdR = 0.26862954f
+            val stdG = 0.26130258f
+            val stdB = 0.27577711f
+            for (i in 0 until w * h) {
+                val p = pixels[i]
+                val r = ((p shr 16) and 0xff) / 255f
+                val g = ((p shr 8) and 0xff) / 255f
+                val b = (p and 0xff) / 255f
+                out[i] = (r - meanR) / stdR
+                out[w * h + i] = (g - meanG) / stdG
+                out[2 * w * h + i] = (b - meanB) / stdB
+            }
+            return out
+        } finally {
+            if (resized !== bitmap) resized.recycle()
+        }
     }
 
     private fun extractEmbedding(result: OrtSession.Result): String {

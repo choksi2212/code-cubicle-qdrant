@@ -143,13 +143,44 @@ export async function runSync(
         limit: 100,
       });
 
+      // FR-054 client-side pre-check: for each pulled point, if a local
+      // point with the same ID exists and our local_updated_at is newer
+      // than the remote, we keep local and skip the upsert. The server
+      // also resolves conflicts (see sync.py), but doing the cheap check
+      // here avoids gratuitous shard churn.
+      const pulledIds = pull.points.map((p) => p.id);
+      let existing: Array<{ id: string; vector: number[]; payload: Payload }> = [];
+      if (pulledIds.length > 0) {
+        try {
+          existing = await fieldEdge.retrieve(pulledIds);
+        } catch (_) {
+          existing = [];
+        }
+      }
+      const existingById = new Map(existing.map((p) => [p.id, p]));
+
       for (const p of pull.points) {
-        const payload = p.payload as unknown as Payload;
+        const remotePayload = p.payload as unknown as Payload;
+        const localMatch = existingById.get(p.id);
+        if (
+          localMatch &&
+          localMatch.payload.local_updated_at &&
+          remotePayload.local_updated_at &&
+          localMatch.payload.local_updated_at > remotePayload.local_updated_at
+        ) {
+          // Local is newer — keep it, count as a conflict (resolved locally).
+          metrics.conflicts++;
+          metrics.resolved++;
+          onProgress?.(
+            `Kept local copy of ${p.id.slice(0, 8)}… (local newer than remote)`,
+          );
+          continue;
+        }
         await fieldEdge.upsertPoints([
-          { id: p.id, vector: p.vector, payload },
+          { id: p.id, vector: p.vector, payload: remotePayload },
         ]);
         metrics.downloaded++;
-        metrics.bytesDownloaded += p.vector.length * 4 + JSON.stringify(p.payload).length;
+        metrics.bytesDownloaded += p.vector.length * 4 + JSON.stringify(remotePayload).length;
       }
       onProgress?.(`Pulled ${metrics.downloaded} points from server`);
     } catch (e) {

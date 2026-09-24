@@ -16,8 +16,12 @@ import {
   View,
 } from 'react-native';
 import { fieldEdge, QueryHit } from '../native/fieldEdge';
-import { embedText, embedPlaceholder } from '../embedding/clip';
-import { FIELD_SHARD_DIR, DEMO_PROJECTS } from '../config';
+import { embedText } from '../embedding/clip';
+import {
+  FIELD_SHARD_DIR,
+  DEMO_PROJECTS,
+  photoFileUriFromRelative,
+} from '../config';
 
 interface Props {
   onPhotoPress: (hit: QueryHit) => void;
@@ -116,14 +120,19 @@ export function SearchScreen({ onPhotoPress }: Props) {
             style={styles.card}
             onPress={() => onPhotoPress(item)}
           >
-            <View style={styles.thumb}>
-              <Text style={styles.thumbPlaceholder}>
-                {item.payload.project_id}
-              </Text>
-            </View>
+            <Image
+              source={{ uri: photoFileUriFromRelative(item.payload.file_path) }}
+              style={styles.thumb}
+              resizeMode="cover"
+            />
             <View style={styles.scoreBadge}>
               <Text style={styles.scoreText}>
                 {(item.score * 100).toFixed(0)}%
+              </Text>
+            </View>
+            <View style={styles.projectBadge}>
+              <Text style={styles.projectText} numberOfLines={1}>
+                {item.payload.project_id}
               </Text>
             </View>
           </Pressable>
@@ -188,13 +197,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   thumb: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  thumbPlaceholder: {
-    color: '#5B6573',
-    fontSize: 12,
+    width: '100%',
+    height: '100%',
   },
   scoreBadge: {
     position: 'absolute',
@@ -209,6 +213,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '600',
+  },
+  projectBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  projectText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '500',
   },
   emptyText: {
     color: '#5B6573',

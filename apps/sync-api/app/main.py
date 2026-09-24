@@ -51,7 +51,7 @@ async def root():
     return {
         "service": "FieldEdge Sync API",
         "version": "0.1.0",
-        "endpoints": ["/sync/upload", "/sync/pull", "/sync/heartbeat"],
+        "endpoints": ["/sync/upload", "/sync/pull", "/sync/wal/replay", "/sync/heartbeat"],
     }
 
 

@@ -334,14 +334,17 @@ struct DlInfo {
     dli_saddr: *mut std::os::raw::c_void,
 }
 
+#[cfg(any(target_os = "android", target_os = "linux"))]
 extern "C" {
     fn dlopen(filename: *const std::os::raw::c_char, flag: i32) -> *mut std::os::raw::c_void;
     fn dlsym(handle: *mut std::os::raw::c_void, name: *const std::os::raw::c_char) -> *mut std::os::raw::c_void;
     fn dlerror() -> *const std::os::raw::c_char;
 }
 
+#[cfg(any(target_os = "android", target_os = "linux"))]
 const RTLD_NOW: i32 = 2;
 
+#[cfg(any(target_os = "android", target_os = "linux"))]
 unsafe fn dlsym_in_self(name: &str) -> *mut std::os::raw::c_void {
     // Check cache first
     {
@@ -364,6 +367,7 @@ unsafe fn dlsym_in_self(name: &str) -> *mut std::os::raw::c_void {
     ptr
 }
 
+#[cfg(any(target_os = "android", target_os = "linux"))]
 #[no_mangle]
 pub extern "C" fn fe_dlsym(name: *const std::os::raw::c_char) -> usize {
     let name = match unsafe { c_str_to_owned(name) } {
@@ -443,10 +447,17 @@ pub extern "C" fn fe_invoke1_i64(func_ptr: usize, a: *const std::os::raw::c_char
 // On Android, Kotlin's `external fun` for static methods produces symbols
 // like `Java_<pkg>_<class>_<method>` (no extra class prefix for object/companion).
 
+#[cfg(target_os = "android")]
 use jni::EnvUnowned;
+#[cfg(target_os = "android")]
 use jni::objects::JString;
+#[cfg(target_os = "android")]
 use jni::sys::jstring;
 
+// All JNI native-method shims below are Android-only. We cfg-gate the entire
+// block so the test binary on Linux/macOS/Windows doesn't try to link
+// JNI symbols it doesn't have.
+#[cfg(target_os = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_feDlsym(
     mut env: EnvUnowned<'_>,
@@ -462,6 +473,7 @@ pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_feDlsym(
     unsafe { fe_dlsym(c_name.as_ptr()) as i64 }
 }
 
+#[cfg(target_os = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_call0String(
     mut env: EnvUnowned<'_>,
@@ -486,6 +498,7 @@ pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_call0String(
     out
 }
 
+#[cfg(target_os = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_call1String(
     mut env: EnvUnowned<'_>,
@@ -517,6 +530,7 @@ pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_call1String(
     out
 }
 
+#[cfg(target_os = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_call2String(
     mut env: EnvUnowned<'_>,
@@ -552,6 +566,7 @@ pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_call2String(
     out
 }
 
+#[cfg(target_os = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_fieldedge_edge_NativeInvoke_call1Long(
     mut _env: EnvUnowned<'_>,

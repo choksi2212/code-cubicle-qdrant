@@ -20,7 +20,7 @@ import {
   Image,
 } from 'react-native';
 import { launchCamera, Asset } from 'react-native-image-picker';
-import { processCapture } from '../services/capture';
+import { processCapture, PhotoCapExceededError } from '../services/capture';
 import { DEMO_PROJECTS } from '../config';
 
 interface Props {
@@ -72,13 +72,25 @@ export function CaptureScreen({ onCaptured, onCancel }: Props) {
         projectId,
       });
 
-      console.log(
-        `Captured ${capture.photoId} (${capture.embeddingStatus})`,
-      );
+      if (capture.embeddingStatus === 'failed') {
+        Alert.alert(
+          'Captured in degraded mode',
+          `Photo ${capture.photoId.slice(0, 8)}… saved, but CLIP embedding failed. ` +
+          `It will not appear in semantic search until the model loads.`,
+        );
+      }
       onCaptured(capture.photoId);
     } catch (e) {
       console.error('Capture failed:', e);
-      Alert.alert('Capture failed', String(e));
+      if (e instanceof PhotoCapExceededError) {
+        Alert.alert(
+          'Photo cap reached',
+          `${e.current} photos on disk (cap ${e.cap}). ` +
+          `Tap Sync to upload pending photos, then try again.`,
+        );
+      } else {
+        Alert.alert('Capture failed', String(e));
+      }
     } finally {
       setBusy(false);
     }

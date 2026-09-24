@@ -26,6 +26,7 @@ import { useSyncStore } from './src/stores/syncStore';
 import { SyncMetrics } from './src/services/sync';
 import { apiClient } from './src/services/api';
 import { FIELD_SHARD_DIR, getDeviceToken } from './src/config';
+import { warmUpClip } from './src/embedding/clip';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { CaptureScreen } from './src/screens/CaptureScreen';
 import { SyncReportScreen } from './src/screens/SyncReportScreen';
@@ -49,6 +50,10 @@ export default function App() {
       // Initialize device identity + Bearer token before anything hits the API.
       const token = await getDeviceToken();
       apiClient.setToken(token);
+
+      // FR-013 — warm up the CLIP ONNX sessions so the first capture is fast.
+      // Fire-and-forget; failure is non-fatal (degraded mode kicks in).
+      warmUpClip().catch(() => {});
 
       const ver = await fieldEdge.version();
       setVersion(ver);

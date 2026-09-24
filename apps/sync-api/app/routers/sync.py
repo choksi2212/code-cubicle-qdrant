@@ -16,6 +16,7 @@ from app.models import (
     PullResponse,
     UploadRequest,
     UploadResponse,
+    WalReplayRequest,
 )
 from app.services import qdrant
 
@@ -185,4 +186,103 @@ async def pull_updates(
         points=filtered,
         next_cursor=new_cursor,
         has_more=next_offset is not None,
+    )
+
+
+@router.post("/wal/replay", response_model=UploadResponse)
+async def wal_replay(
+    req: WalReplayRequest,
+    device_id: str = Depends(verify_device_token),
+):
+    """FR-080 — replay a previously-uploaded batch after a crash.
+
+    Used when the device believes a `POST /sync/upload` succeeded but never
+    received a response (e.g. network dropped mid-flight). The device sends
+    the same batch_id + points again; the server upserts idempotently by
+    point ID and returns the per-point result.
+    """
+    logger.info(f"WAL replay: batch={req.batch_id} device={device_id} pts={len(req.points)}")
+    # Re-use the upload_points logic by calling it directly via the same flow.
+    # FastAPI doesn't allow easy reuse, so we mirror the same loop here.
+    if len(req.points) > 100:
+        raise HTTPException(status_code=413, detail="Batch too large (>100 points)")
+
+    client = qdrant.get_client()
+    qdrant.ensure_collection(client, settings.qdrant_collection)
+
+    results: list[PointResult] = []
+    for point in req.points:
+        try:
+            payload_dict = point.payload.model_dump(mode="json")
+            existing = qdrant.retrieve_point(client, settings.qdrant_collection, point.id)
+
+            if not existing:
+                # Fresh point.
+                try:
+                    qdrant.upsert_point(
+                        client, settings.qdrant_collection,
+                        point.id, point.vector, payload_dict,
+                    )
+                    results.append(PointResult(id=point.id, status="accepted", server_version=1))
+                except Exception as e:
+                    logger.warning(f"wal_replay upsert failed for {point.id}: {e}")
+                    results.append(PointResult(
+                        id=point.id, status="rejected_invalid_payload",
+                        error_message=str(e),
+                    ))
+                continue
+
+            # Existing point — idempotent if checksum matches.
+            if existing["payload"].get("vector_checksum") == point.payload.vector_checksum:
+                results.append(PointResult(
+                    id=point.id, status="accepted",
+                    server_version=existing["payload"].get("server_version", 1),
+                ))
+                continue
+
+            # Different checksum → conflict, resolve by timestamp.
+            local_ts = point.payload.local_updated_at
+            remote_ts_str = existing["payload"].get("local_updated_at")
+            remote_ts = (
+                datetime.fromisoformat(remote_ts_str.replace("Z", "+00:00"))
+                if remote_ts_str else None
+            )
+            if remote_ts and local_ts < remote_ts:
+                results.append(PointResult(
+                    id=point.id, status="rejected_too_old",
+                    resolved_payload=existing["payload"],
+                ))
+            else:
+                merged = {**existing["payload"], **payload_dict}
+                qdrant.upsert_point(
+                    client, settings.qdrant_collection,
+                    point.id, point.vector, merged,
+                )
+                results.append(PointResult(
+                    id=point.id, status="conflict_resolved",
+                    resolution="local_wins", resolved_payload=merged,
+                    server_version=merged.get("server_version", 1) + 1,
+                ))
+        except Exception as e:
+            logger.exception(f"wal_replay failed for {point.id}")
+            results.append(PointResult(
+                id=point.id, status="rejected_invalid_payload",
+                error_message=str(e),
+            ))
+
+    server_time = datetime.now(timezone.utc)
+    last_id = req.points[-1].id if req.points else ""
+
+    from app.routers.health import record_upload
+    record_upload(
+        accepted=sum(1 for r in results if r.status == "accepted"),
+        conflict=sum(1 for r in results if r.status == "conflict_resolved"),
+        rejected=sum(1 for r in results if r.status.startswith("rejected")),
+    )
+
+    return UploadResponse(
+        batch_id=req.batch_id,
+        server_time=server_time,
+        results=results,
+        next_cursor=_encode_cursor(server_time, last_id),
     )

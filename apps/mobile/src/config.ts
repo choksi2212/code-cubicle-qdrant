@@ -8,6 +8,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import RNFS from 'react-native-fs';
 import { ulid } from 'ulid';
 
 // ─── Device identity ─────────────────────────────────────────────────────────
@@ -88,6 +89,43 @@ export const FIELD_SHARD_DIR = (() => {
 
 /** Same path as FIELD_SHARD_DIR plus the canonical WAL filename. */
 export const WAL_PATH = `${FIELD_SHARD_DIR}/sync.wal`;
+
+// ─── Photo cap (FR-024) ─────────────────────────────────────────────────────
+
+/** Default per-device photo cap. Override at runtime with setPhotoCap(). */
+export const PHOTO_CAP_DEFAULT = 5000;
+let _photoCap: number = PHOTO_CAP_DEFAULT;
+export function setPhotoCap(n: number) { _photoCap = Math.max(0, Math.floor(n)); }
+export function getPhotoCap(): number { return _photoCap; }
+
+// ─── Photo file paths (FR-001) ──────────────────────────────────────────────
+//
+// JPEGs live under <app_docs>/<project_id>/<device_id>/<photo_id>.jpg so
+// they survive Android clearing the image-picker cache.
+
+export function photoDir(projectId: string, deviceId: string): string {
+  return `${RNFS.DocumentDirectoryPath}/${projectId}/${deviceId}`;
+}
+
+export function photoAbsPath(projectId: string, deviceId: string, photoId: string): string {
+  return `${photoDir(projectId, deviceId)}/${photoId}.jpg`;
+}
+
+export function relativePhotoPath(projectId: string, deviceId: string, photoId: string): string {
+  return `${projectId}/${deviceId}/${photoId}.jpg`;
+}
+
+export function photoFileUri(absPath: string): string {
+  return absPath.startsWith('file://') ? absPath : `file://${absPath}`;
+}
+
+/** Build a `file://` URI from a relative payload.file_path. */
+export function photoFileUriFromRelative(relPath: string): string {
+  return photoFileUri(`${RNFS.DocumentDirectoryPath}/${relPath}`);
+}
+
+/** Re-export for screens that need the absolute docs path. */
+export const APP_DOCS_PATH = RNFS.DocumentDirectoryPath;
 
 // ─── Feature flags ───────────────────────────────────────────────────────────
 

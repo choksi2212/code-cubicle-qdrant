@@ -16,8 +16,10 @@ import { NativeModules, Platform } from 'react-native';
 
 const OnnxClip = NativeModules.OnnxClip as {
   embedImage(pixelValuesJson: string): Promise<string>;
+  embedImageFromUri(uri: string): Promise<string>;
   embedText(inputIdsJson: string): Promise<string>;
   isReady(): Promise<boolean>;
+  warmUp(): Promise<boolean>;
 };
 
 export const CLIP_MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -204,52 +206,18 @@ export async function tokenizeForClip(text: string, maxLen = 77): Promise<number
   return ids.slice(0, maxLen);
 }
 
-// ─── Image preprocessing ─────────────────────────────────────────────────────
-
-/**
- * Read a JPEG file and return RGBA pixels of a 224×224 version.
- * In production, uses `react-native-image-resizer` + `react-native-fs`.
- */
-async function readImagePixels(_uri: string): Promise<Uint8Array> {
-  // Real impl: load JPEG via a native module, resize to 224×224, return RGBA.
-  // For demo with the Rust bridge doing the actual storage, we delegate
-  // the image read to a native module (to be added) and throw if unavailable.
-  throw new Error(
-    'Image preprocessing requires react-native-image-resizer integration (Day 5+)',
-  );
-}
-
-/**
- * Convert RGBA pixels (W*H*4 bytes) to a CLIP-normalized CHW Float32Array.
- *
- * Per CLIP: (pixel/255 - mean) / std, laid out as CHW.
- */
-export function preprocessImage(rgba: Uint8Array): Float32Array {
-  const w = CLIP_INPUT_SIZE;
-  const h = CLIP_INPUT_SIZE;
-  const out = new Float32Array(1 * 3 * h * w);
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-      const r = rgba[i] / 255.0;
-      const g = rgba[i + 1] / 255.0;
-      const b = rgba[i + 2] / 255.0;
-
-      const idx = y * w + x;
-      out[idx] = (r - CLIP_MEAN[0]) / CLIP_STD[0];
-      out[h * w + idx] = (g - CLIP_MEAN[1]) / CLIP_STD[1];
-      out[2 * h * w + idx] = (b - CLIP_MEAN[2]) / CLIP_STD[2];
-    }
-  }
-  return out;
-}
+// ─── Image preprocessing is done natively in OnnxClipModule.preprocessForClip ──
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
  * Real CLIP image embedding via the loaded ONNX model.
  * Returns null if model not loaded.
+ *
+ * Implementation: hands the file URI directly to the native module, which
+ * uses BitmapFactory to decode the JPEG, resizes to 224×224, applies CLIP's
+ * per-channel normalization, and runs ONNX inference. Avoids shipping 150k
+ * floats over the JS↔native bridge.
  */
 export async function embedImage(uri: string): Promise<number[] | null> {
   if (Platform.OS !== 'android' || !OnnxClip) return null;
@@ -257,11 +225,13 @@ export async function embedImage(uri: string): Promise<number[] | null> {
   const ready = await OnnxClip.isReady();
   if (!ready) return null;
 
-  const rgba = await readImagePixels(uri);
-  const chw = preprocessImage(rgba);
-  const json = '[' + Array.from(chw).join(',') + ']';
-  const resultJson = await OnnxClip.embedImage(json);
-  return JSON.parse(resultJson) as number[];
+  try {
+    const resultJson = await OnnxClip.embedImageFromUri(uri);
+    return JSON.parse(resultJson) as number[];
+  } catch (e) {
+    console.warn('clip', `embedImage failed for ${uri}:`, e);
+    return null;
+  }
 }
 
 /**
@@ -286,4 +256,23 @@ export async function embedText(text: string): Promise<number[] | null> {
 export async function isClipReady(): Promise<boolean> {
   if (Platform.OS !== 'android' || !OnnxClip) return false;
   return await OnnxClip.isReady();
+}
+
+/**
+ * FR-013 — pre-load both ONNX sessions at app launch so the first real
+ * capture / search doesn't pay the ~500 ms cold-start cost.
+ *
+ * Idempotent and safe to call multiple times. Returns true if the model
+ * is loaded after the call (either pre-existing or freshly warmed).
+ */
+export async function warmUpClip(): Promise<boolean> {
+  if (Platform.OS !== 'android' || !OnnxClip) return false;
+  try {
+    const ok = await OnnxClip.warmUp();
+    if (ok) console.log('[clip] warmed up');
+    return ok;
+  } catch (e) {
+    console.warn('[clip] warm-up failed (model files missing?):', e);
+    return false;
+  }
 }

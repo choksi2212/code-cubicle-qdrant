@@ -139,6 +139,28 @@ class ApiClient {
     }
     return resp.json();
   }
+
+  /**
+   * FR-080 — replay a previously-uploaded batch after a crash or network
+   * drop. The server upserts idempotently by point ID, so re-sending a
+   * batch it already has just returns 'accepted' for each point.
+   */
+  async walReplay(req: {
+    device_id: string;
+    batch_id: string;
+    points: Array<{ id: string; vector: number[]; payload: Record<string, unknown> }>;
+  }): Promise<UploadResponse> {
+    const resp = await this.fetchWithTimeout(`${SYNC_API_URL}/sync/wal/replay`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({ ...req, replay: true }),
+    });
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(`WAL replay failed: ${resp.status} ${body.slice(0, 200)}`);
+    }
+    return resp.json();
+  }
 }
 
 export const apiClient = new ApiClient();
