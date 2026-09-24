@@ -15,7 +15,7 @@ module.exports = {
     '^.+\\.tsx?$': ['babel-jest', { configFile: './babel.config.js' }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!react-native|@react-native|@react-native-async-storage|react-native-fs)/',
+    'node_modules/(?!react-native|@react-native|@react-native-async-storage|react-native-fs|react-native-reanimated|react-native-safe-area-context|lucide-react-native)/',
   ],
   // Tests mock RNFS, fieldEdge, location, clip, config explicitly — the
   // bare `react-native` import in capture.ts should still resolve to a
@@ -25,6 +25,9 @@ module.exports = {
   // pull in here.
   moduleNameMapper: {
     '^react-native$': '<rootDir>/__mocks__/react-native.js',
+    '^react-native-reanimated$': '<rootDir>/__mocks__/react-native-reanimated.js',
+    '^react-native-safe-area-context$': '<rootDir>/__mocks__/react-native-safe-area-context.js',
+    '^lucide-react-native$': '<rootDir>/__mocks__/lucide-react-native.js',
   },
   testEnvironment: 'node',
 };
