@@ -24,6 +24,9 @@ interface Props {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   hitSlop?: number;
+  accessibilityLabel?: string;
+  accessibilityRole?: 'button' | 'link' | 'imagebutton' | 'tab' | 'none';
+  testID?: string;
 }
 
 export function PressableScale({
@@ -32,6 +35,9 @@ export function PressableScale({
   disabled,
   style,
   hitSlop = 8,
+  accessibilityLabel,
+  accessibilityRole = 'button',
+  testID,
 }: Props) {
   const scale = useSharedValue(1);
 
@@ -50,6 +56,9 @@ export function PressableScale({
       onPressOut={onPressOut}
       disabled={disabled}
       hitSlop={hitSlop}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
+      testID={testID}
     >
       <Animated.View style={[style, { transform: [{ scale }] }]}>
         {children}

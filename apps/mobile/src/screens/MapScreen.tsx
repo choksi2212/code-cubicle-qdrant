@@ -133,6 +133,7 @@ export function MapScreen({ onBack, onOpenPhoto }: Props) {
               return (
                 <MarkerPin
                   key={m.photoId}
+                  photoId={m.photoId}
                   x={x - size / 2}
                   y={y - size / 2}
                   size={size}
@@ -153,7 +154,7 @@ export function MapScreen({ onBack, onOpenPhoto }: Props) {
   );
 }
 
-function MarkerPin({ x, y, size, onPress }: { x: number; y: number; size: number; onPress: () => void }) {
+function MarkerPin({ photoId, x, y, size, onPress }: { photoId: string; x: number; y: number; size: number; onPress: () => void }) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (

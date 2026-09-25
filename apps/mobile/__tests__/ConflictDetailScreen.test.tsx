@@ -12,6 +12,7 @@
  */
 
 import React from 'react';
+import { safeStringify, findPressableWithText } from './helpers/testHelpers';
 import renderer from 'react-test-renderer';
 import { act } from 'react-test-renderer';
 
@@ -92,7 +93,7 @@ describe('ConflictDetailScreen', () => {
         />,
       );
     });
-    const json = JSON.stringify(tree!.toJSON());
+    const json = safeStringify(tree!.toJSON());
     expect(json).toContain('Local version won');
     expect(json).toContain('Local');
     expect(json).toContain('Remote');
@@ -111,7 +112,7 @@ describe('ConflictDetailScreen', () => {
         />,
       );
     });
-    const json = JSON.stringify(tree!.toJSON());
+    const json = safeStringify(tree!.toJSON());
     expect(json).toContain('Could not load conflict');
     expect(json).toContain('network down');
     expect(json).toContain('Back');
@@ -133,7 +134,7 @@ describe('ConflictDetailScreen', () => {
         />,
       );
     });
-    const json = JSON.stringify(tree!.toJSON());
+    const json = safeStringify(tree!.toJSON());
     expect(json).toContain('Unavailable');
     expect(json).toContain('Remote version won');
   });

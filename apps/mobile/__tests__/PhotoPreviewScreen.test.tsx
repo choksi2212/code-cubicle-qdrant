@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { safeStringify, findPressableWithText } from './helpers/testHelpers';
 import renderer, { act } from 'react-test-renderer';
 
 jest.mock('../src/native/fieldEdge', () => ({
@@ -92,7 +93,7 @@ describe('PhotoPreviewScreen', () => {
     await act(async () => {
       root = renderer.create(<PhotoPreviewScreen photoId="p1" onClose={() => {}} />);
     });
-    const json = JSON.stringify(root!.toJSON());
+    const json = safeStringify(root!.toJSON());
     // Either loading spinner or empty tree — both are pre-data.
     expect(json).not.toContain('Photo ID');
     resolveRetrieve([]);
@@ -104,7 +105,7 @@ describe('PhotoPreviewScreen', () => {
     const root = await mountAndLoad(
       <PhotoPreviewScreen photoId="missing" onClose={() => {}} />,
     );
-    expect(JSON.stringify(root.toJSON())).toContain('Photo not found in local shard');
+    expect(safeStringify(root.toJSON())).toContain('Photo not found in local shard');
   });
 
   it('renders the metadata card for an OK photo', async () => {
@@ -114,7 +115,7 @@ describe('PhotoPreviewScreen', () => {
     const root = await mountAndLoad(
       <PhotoPreviewScreen photoId="p1" onClose={() => {}} />,
     );
-    const json = JSON.stringify(root.toJSON());
+    const json = safeStringify(root.toJSON());
     expect(json).toContain('Photo ID');
     expect(json).toContain('Captured');
     expect(json).toContain('GPS');
@@ -132,7 +133,7 @@ describe('PhotoPreviewScreen', () => {
     const root = await mountAndLoad(
       <PhotoPreviewScreen photoId="p1" onClose={() => {}} />,
     );
-    expect(JSON.stringify(root.toJSON())).toContain('Photo not on disk');
+    expect(safeStringify(root.toJSON())).toContain('Photo not on disk');
   });
 
   it('calls onClose when the back button is pressed', async () => {
@@ -144,32 +145,11 @@ describe('PhotoPreviewScreen', () => {
       <PhotoPreviewScreen photoId="p1" onClose={onClose} />,
     );
     // The Header's PressableScale wraps the chevron + "Back" Text. Walk the
-    // tree and invoke the FIRST Pressable whose rendered tree contains
-    // the literal "Back" — there is only one such Pressable in this screen.
-    let pressed = false;
-    const walk = (node: any) => {
-      if (pressed) return;
-      if (typeof node.props?.onPress === 'function') {
-        let s = '';
-        try {
-          s = JSON.stringify(node.toJSON ? node.toJSON() : node);
-        } catch {
-          s = '';
-        }
-        // The header back button contains "Back"; the toolbar buttons
-        // (disabled) have no onPress so the function check filters them out.
-        if (s.includes('Back') && s.includes('ChevronLeft')) {
-          act(() => node.props.onPress());
-          pressed = true;
-          return;
-        }
-      }
-      const children = node.children || [];
-      for (const child of children) {
-        if (child && typeof child === 'object') walk(child);
-      }
-    };
-    walk(root.root);
+    // tree without JSON.stringify (reanimated shared values create circular
+    // refs) and invoke the FIRST Pressable whose subtree contains "Back".
+    const target = findPressableWithText(root.root, 'Back');
+    expect(target).not.toBeNull();
+    act(() => target.props.onPress());
     expect(onClose).toHaveBeenCalled();
   });
 });

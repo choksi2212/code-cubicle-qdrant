@@ -19,6 +19,7 @@ exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
     }
   >
     <Pressable
+      accessibilityRole="button"
       hitSlop={12}
       onPress={[Function]}
       onPressIn={[Function]}
@@ -50,12 +51,23 @@ exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
             }
           }
         >
-          <Icon
-            color="#B4BCCC"
-            name="ChevronLeft"
-            size={16}
+          <Svg
+            accessibilityLabel="ChevronLeft"
+            fill="none"
+            height={16}
+            stroke="#B4BCCC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={16}
+          >
+            <Polyline
+              points="15 18 9 12 15 6"
+              stroke="#B4BCCC"
+              strokeWidth={2}
+            />
+          </Svg>
           <Text
             style={
               {
@@ -136,12 +148,39 @@ exports[`AlbumScreen matches the locked layout snapshot (empty shard) 1`] = `
           }
         }
       >
-        <Icon
-          color="#6366F1"
-          name="Image"
-          size={32}
+        <Svg
+          accessibilityLabel="Image"
+          fill="none"
+          height={32}
+          stroke="#6366F1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={32}
+        >
+          <Rect
+            height={18}
+            rx={2}
+            stroke="#6366F1"
+            strokeWidth={2}
+            width={18}
+            x={3}
+            y={3}
+          />
+          <Circle
+            cx={8.5}
+            cy={8.5}
+            r={1.5}
+            stroke="#6366F1"
+            strokeWidth={2}
+          />
+          <Polyline
+            points="21 15 16 10 5 21"
+            stroke="#6366F1"
+            strokeWidth={2}
+          />
+        </Svg>
       </View>
       <Text
         style={
@@ -195,6 +234,7 @@ exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = 
     }
   >
     <Pressable
+      accessibilityRole="button"
       hitSlop={12}
       onPress={[Function]}
       onPressIn={[Function]}
@@ -226,12 +266,23 @@ exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = 
             }
           }
         >
-          <Icon
-            color="#B4BCCC"
-            name="ChevronLeft"
-            size={16}
+          <Svg
+            accessibilityLabel="ChevronLeft"
+            fill="none"
+            height={16}
+            stroke="#B4BCCC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={16}
+          >
+            <Polyline
+              points="15 18 9 12 15 6"
+              stroke="#B4BCCC"
+              strokeWidth={2}
+            />
+          </Svg>
           <Text
             style={
               {
@@ -382,6 +433,8 @@ exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = 
           }
         >
           <Pressable
+            accessibilityLabel="Album photo p1"
+            accessibilityRole="button"
             hitSlop={8}
             onPress={[Function]}
             onPressIn={[Function]}
@@ -518,6 +571,8 @@ exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = 
           }
         >
           <Pressable
+            accessibilityLabel="Album photo p2"
+            accessibilityRole="button"
             hitSlop={8}
             onPress={[Function]}
             onPressIn={[Function]}

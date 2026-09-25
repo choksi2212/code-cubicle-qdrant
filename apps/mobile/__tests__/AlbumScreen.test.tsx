@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { safeStringify, findPressableWithText } from './helpers/testHelpers';
 import renderer, { act, ReactTestInstance } from 'react-test-renderer';
 
 jest.mock('../src/native/fieldEdge', () => ({
@@ -132,7 +133,7 @@ describe('AlbumScreen', () => {
     const root = await mountAndLoad(
       <AlbumScreen onBack={() => {}} onPhotoPress={() => {}} />,
     );
-    const json = JSON.stringify(root.toJSON());
+    const json = safeStringify(root.toJSON());
     expect(json).toContain('Today');
     expect(json).toContain('Yesterday');
     expect(json).toContain('This week');
@@ -145,7 +146,7 @@ describe('AlbumScreen', () => {
     const root = await mountAndLoad(
       <AlbumScreen onBack={() => {}} onPhotoPress={() => {}} />,
     );
-    expect(JSON.stringify(root.toJSON())).toContain('No photos yet');
+    expect(safeStringify(root.toJSON())).toContain('No photos yet');
   });
 
   it('invokes onPhotoPress when a thumbnail cell is pressed', async () => {
@@ -157,30 +158,12 @@ describe('AlbumScreen', () => {
     const root = await mountAndLoad(
       <AlbumScreen onBack={() => {}} onPhotoPress={onPhotoPress} />,
     );
-    // Walk the tree to find a Pressable that, when JSON-serialized, contains
-    // the photo id. We use toJSON() to avoid circular refs.
-    let tapped = false;
-    const walk = (node: any) => {
-      if (tapped) return;
-      if (typeof node.props?.onPress === 'function') {
-        let s = '';
-        try {
-          s = JSON.stringify(node.toJSON ? node.toJSON() : node);
-        } catch {
-          s = '';
-        }
-        if (s.includes('photo-abc')) {
-          act(() => node.props.onPress());
-          tapped = true;
-          return;
-        }
-      }
-      const children = node.children || [];
-      for (const child of children) {
-        if (child && typeof child === 'object') walk(child);
-      }
-    };
-    walk(root.root);
+    // Walk the tree without JSON.stringify (reanimated shared values make
+    // toJSON() throw on circular refs). Look for any Pressable whose subtree
+    // contains the photo id we rendered.
+    const target = findPressableWithText(root.root, 'photo-abc');
+    expect(target).not.toBeNull();
+    act(() => target.props.onPress());
     expect(onPhotoPress).toHaveBeenCalledWith('photo-abc');
   });
 });

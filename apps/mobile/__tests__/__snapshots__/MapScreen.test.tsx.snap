@@ -19,6 +19,7 @@ exports[`MapScreen matches the locked layout snapshot (no GPS data) 1`] = `
     }
   >
     <Pressable
+      accessibilityRole="button"
       hitSlop={12}
       onPress={[Function]}
       onPressIn={[Function]}
@@ -50,12 +51,23 @@ exports[`MapScreen matches the locked layout snapshot (no GPS data) 1`] = `
             }
           }
         >
-          <Icon
-            color="#B4BCCC"
-            name="ChevronLeft"
-            size={16}
+          <Svg
+            accessibilityLabel="ChevronLeft"
+            fill="none"
+            height={16}
+            stroke="#B4BCCC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={16}
+          >
+            <Polyline
+              points="15 18 9 12 15 6"
+              stroke="#B4BCCC"
+              strokeWidth={2}
+            />
+          </Svg>
           <Text
             style={
               {
@@ -136,12 +148,30 @@ exports[`MapScreen matches the locked layout snapshot (no GPS data) 1`] = `
           }
         }
       >
-        <Icon
-          color="#6366F1"
-          name="MapPin"
-          size={32}
+        <Svg
+          accessibilityLabel="MapPin"
+          fill="none"
+          height={32}
+          stroke="#6366F1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth={2}
-        />
+          viewBox="0 0 24 24"
+          width={32}
+        >
+          <Path
+            d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+            stroke="#6366F1"
+            strokeWidth={2}
+          />
+          <Circle
+            cx={12}
+            cy={10}
+            r={3}
+            stroke="#6366F1"
+            strokeWidth={2}
+          />
+        </Svg>
       </View>
       <Text
         style={
@@ -195,6 +225,7 @@ exports[`MapScreen matches the locked layout snapshot (populated with markers) 1
     }
   >
     <Pressable
+      accessibilityRole="button"
       hitSlop={12}
       onPress={[Function]}
       onPressIn={[Function]}
@@ -226,12 +257,23 @@ exports[`MapScreen matches the locked layout snapshot (populated with markers) 1
             }
           }
         >
-          <Icon
-            color="#B4BCCC"
-            name="ChevronLeft"
-            size={16}
+          <Svg
+            accessibilityLabel="ChevronLeft"
+            fill="none"
+            height={16}
+            stroke="#B4BCCC"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             strokeWidth={2}
-          />
+            viewBox="0 0 24 24"
+            width={16}
+          >
+            <Polyline
+              points="15 18 9 12 15 6"
+              stroke="#B4BCCC"
+              strokeWidth={2}
+            />
+          </Svg>
           <Text
             style={
               {
@@ -424,6 +466,8 @@ exports[`MapScreen matches the locked layout snapshot (populated with markers) 1
         }
       >
         <Pressable
+          accessibilityLabel="Map marker p1"
+          accessibilityRole="button"
           hitSlop={8}
           onPress={[Function]}
           onPressIn={[Function]}
@@ -501,6 +545,8 @@ exports[`MapScreen matches the locked layout snapshot (populated with markers) 1
         }
       >
         <Pressable
+          accessibilityLabel="Map marker p2"
+          accessibilityRole="button"
           hitSlop={8}
           onPress={[Function]}
           onPressIn={[Function]}

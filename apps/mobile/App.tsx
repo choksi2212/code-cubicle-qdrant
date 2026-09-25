@@ -37,6 +37,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { fieldEdge } from './src/native/fieldEdge';
 import { useSyncStore } from './src/stores/syncStore';
 import { useSettingsStore } from './src/stores/settingsStore';
@@ -254,8 +255,9 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
       <View style={styles.scaffoldWrap}>
         <ScreenScaffold
           title={scaffoldTitle}
@@ -293,7 +295,8 @@ export default function App() {
         onChange={goToTab}
         onFabPress={() => setScreen('capture')}
       />
-    </View>
+      </View>
+    </SafeAreaProvider>
   );
 }
 

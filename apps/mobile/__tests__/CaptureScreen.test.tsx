@@ -16,6 +16,7 @@
  */
 
 import React from 'react';
+import { safeStringify, findPressableWithText } from './helpers/testHelpers';
 import renderer, { act, ReactTestInstance } from 'react-test-renderer';
 
 const mockLaunchCamera = jest.fn();
@@ -82,7 +83,7 @@ describe('CaptureScreen — header + project chips', () => {
     const tree = renderer.create(
       <CaptureScreen onCaptured={() => {}} onCancel={() => {}} />,
     );
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('Capture');
     expect(json).toContain('on-device');
   });
@@ -91,7 +92,7 @@ describe('CaptureScreen — header + project chips', () => {
     const tree = renderer.create(
       <CaptureScreen onCaptured={() => {}} onCancel={() => {}} />,
     );
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     expect(json).toContain('River Study');
     expect(json).toContain('Forest Survey');
     expect(json).toContain('Urban Infrastructure');
@@ -130,7 +131,7 @@ describe('CaptureScreen — header + project chips', () => {
     act(() => {
       (forestChip.props as any).onPress();
     });
-    const json = JSON.stringify(tree.toJSON());
+    const json = safeStringify(tree.toJSON());
     // Forest chip should now carry the accent border colour.
     expect(json).toContain('F5A524'); // forest-survey color dot
   });
