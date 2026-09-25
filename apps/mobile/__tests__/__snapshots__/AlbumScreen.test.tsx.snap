@@ -375,7 +375,7 @@ exports[`AlbumScreen matches the locked layout snapshot (populated shard) 1`] = 
             }
           }
         >
-          Today
+          Yesterday
         </Text>
         <View
           style={
